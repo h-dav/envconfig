@@ -40,9 +40,9 @@ func setVars(filename string) error {
 		line, err := reader.ReadString('\n')
 		if err != nil {
 			if err == io.EOF {
-				break // Reached end of file
+				break
 			} else {
-				return err // Handle other errors
+				return err
 			}
 		}
 
@@ -101,10 +101,12 @@ func populate(cfg interface{}) error {
 	vType := v.Type()
 	for i := 0; i < vType.NumField(); i++ {
 		field := vType.Field(i)
+
 		value := os.Getenv(field.Tag.Get("env"))
 		if value == "" {
 			continue
 		}
+
 		v.Field(i).SetString(value)
 	}
 
