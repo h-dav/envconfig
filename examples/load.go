@@ -4,7 +4,7 @@ import (
 	"log"
 	"path/filepath"
 
-	"gitlab.com/harry.davidson/envconfig"
+	"gitlab.com/hcdav/envconfig"
 )
 
 func main() {

@@ -1,3 +1,3 @@
-module gitlab.com/harry.davidson/envconfig
+module gitlab.com/hcdav/envconfig
 
 go 1.21.2
