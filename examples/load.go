@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"path/filepath"
 
@@ -10,10 +9,11 @@ import (
 
 func main() {
 	type ExampleConfig struct {
-		Example      string `env:"EXAMPLE"`
+		Example      string `env:"EXAMPLE,required"`
 		AnotherValue string `env:"ANOTHER_VALUE"`
 		Service      struct {
 			Port string `env:"PORT"`
+			Name string `env:"NAME,required"`
 		} `env:"HTTP_,prefix"`
 	}
 
@@ -22,6 +22,4 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	fmt.Println(cfg)
 }

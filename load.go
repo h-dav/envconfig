@@ -18,11 +18,13 @@ type pair struct {
 
 // options are included in the tag.
 type options struct {
-	prefix bool
+	prefix   bool
+	required bool
 }
 
 const (
-	optPrefix = "prefix"
+	optPrefix   = "prefix"
+	optRequired = "required"
 )
 
 // SetPopulate combines the functionality of SetVars and Populate.
@@ -122,9 +124,19 @@ func populate(cfg interface{}) error {
 			return fmt.Errorf("processing key and options: %v", err)
 		}
 
+		// Check if the tag in the struct is set in the OS `required`
+		if opts.required {
+			if err := handleRequired(key); err != nil {
+				return fmt.Errorf("handling required option: %v", err)
+			}
+			continue
+		}
+
 		// Populate the nested prefix struct (All nested structs must use `prefix`).
 		if opts.prefix {
-			handlePrefix(value, i, field, key)
+			if err := handlePrefix(value, i, field, key); err != nil {
+				return fmt.Errorf("handling prefix option: %v", err)
+			}
 			continue
 		}
 
@@ -139,7 +151,7 @@ func populate(cfg interface{}) error {
 	return nil
 }
 
-func handlePrefix(value reflect.Value, i int, field reflect.StructField, key string) {
+func handlePrefix(value reflect.Value, i int, field reflect.StructField, key string) error {
 	nestedStruct := value.Field(i)
 	nestedType := field.Type
 
@@ -147,13 +159,33 @@ func handlePrefix(value reflect.Value, i int, field reflect.StructField, key str
 		nestedField := nestedType.Field(ni)
 		nestedTag := nestedField.Tag.Get("env")
 
-		envValue := os.Getenv(key + nestedTag)
+		nestedKey, nestedOpts, err := keyAndOptions(key + nestedTag)
+		if err != nil {
+			return fmt.Errorf("processing key and option: %v", err)
+		}
+
+		if nestedOpts.required {
+			if err := handleRequired(nestedKey); err != nil {
+				return fmt.Errorf("checking for required value: %v", err)
+			}
+		}
+
+		envValue := os.Getenv(nestedKey)
 		if envValue == "" {
 			continue
 		}
 
 		value.Field(i).Field(ni).SetString(envValue)
 	}
+	return nil
+}
+
+func handleRequired(key string) error {
+	envValue := os.Getenv(key)
+	if envValue == "" {
+		return fmt.Errorf("value does not exist for struct tag: %v", key)
+	}
+	return nil
 }
 
 func keyAndOptions(tag string) (string, options, error) {
@@ -167,6 +199,8 @@ func keyAndOptions(tag string) (string, options, error) {
 		switch {
 		case o == optPrefix:
 			opts.prefix = true
+		case o == optRequired:
+			opts.required = true
 		}
 	}
 
