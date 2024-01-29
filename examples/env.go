@@ -14,7 +14,7 @@ func main() {
 		IntExample   int     `env:"INT_EXAMPLE"`
 		FloatExample float64 `env:"FLOAT_EXAMPLE"`
 		Service      struct {
-			Port string `env:"PORT"`
+			Port int    `env:"PORT"`
 			Name string `env:"NAME,required"`
 		} `env:"HTTP_,prefix"`
 	}

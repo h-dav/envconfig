@@ -136,7 +136,7 @@ func populate(cfg interface{}) error {
 			continue
 		}
 
-		if err := setInStruct(envValue, value, i); err != nil {
+		if err := setInStruct(envValue, value.Field(i)); err != nil {
 			return fmt.Errorf("setting value in config struct: %v", err)
 		}
 
@@ -145,28 +145,28 @@ func populate(cfg interface{}) error {
 	return nil
 }
 
-func setInStruct(envValue string, value reflect.Value, i int) error {
-	switch value.Field(i).Kind() {
+func setInStruct(envValue string, value reflect.Value) error {
+	switch value.Kind() {
 	case reflect.Int:
 		intValue, err := strconv.Atoi(envValue)
 		if err != nil {
 			return ErrMismatchedDataType
 		}
-		value.Field(i).SetInt(int64(intValue))
+		value.SetInt(int64(intValue))
 	case reflect.Bool:
 		result := false
 		if envValue == "true" || envValue == "1" {
 			result = true
 		}
-		value.Field(i).SetBool(result)
+		value.SetBool(result)
 	case reflect.Float64:
 		floatValue, err := strconv.ParseFloat(envValue, 64)
 		if err != nil {
 			return ErrMismatchedDataType
 		}
-		value.Field(i).SetFloat(floatValue)
+		value.SetFloat(floatValue)
 	default:
-		value.Field(i).SetString(envValue)
+		value.SetString(envValue)
 	}
 
 	return nil
@@ -188,7 +188,9 @@ func handlePrefix(value reflect.Value, i int, field reflect.StructField, key str
 			return ErrRequiredFulfilled
 		}
 
-		value.Field(i).Field(ni).SetString(envValue)
+		if err := setInStruct(envValue, value.Field(i).Field(ni)); err != nil {
+			return fmt.Errorf("setting nested struct value: %v", err)
+		}
 	}
 
 	return nil
