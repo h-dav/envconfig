@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"reflect"
+	"strconv"
 	"strings"
 )
 
@@ -30,21 +31,9 @@ const (
 )
 
 var (
-	ErrRequiredFulfilled = errors.New("required value is not set")
+	ErrRequiredFulfilled  = errors.New("required value is not set")
+	ErrMismatchedDataType = errors.New("data types do not match")
 )
-
-// SetPopulate combines the functionality of SetVars and Populate.
-func SetPopulate(filename string, cfg interface{}) error {
-	if err := setVars(filename); err != nil {
-		return err
-	}
-
-	if err := populate(cfg); err != nil {
-		return err
-	}
-
-	return nil
-}
 
 // SetVars reads a .env file and then writes the values to os env variables.
 func SetVars(filename string) error {
@@ -89,8 +78,8 @@ func setEnvValue(pair pair) error {
 	if err != nil {
 		return err
 	}
-	return nil
 
+	return nil
 }
 
 // Remember to close the file after reading from Reader is done.
@@ -125,17 +114,13 @@ func populate(cfg interface{}) error {
 		field := vType.Field(i)
 		tag := field.Tag.Get("env")
 
-		key, opts, err := keyAndOptions(tag)
-		if err != nil {
-			return fmt.Errorf("processing key and options: %v", err)
-		}
+		key, opts := keyAndOptions(tag)
 
 		// Check if the tag in the struct is set in the OS `required`
 		if opts.required {
 			if err := handleRequired(key); err != nil {
 				return fmt.Errorf("handling required option: %v", err)
 			}
-			continue
 		}
 
 		// Populate the nested prefix struct (All nested structs must use `prefix`).
@@ -146,11 +131,41 @@ func populate(cfg interface{}) error {
 			continue
 		}
 
-		envValue := os.Getenv(tag)
+		envValue := os.Getenv(key)
 		if envValue == "" {
 			continue
 		}
 
+		if err := setInStruct(envValue, value, i); err != nil {
+			return fmt.Errorf("setting value in config struct: %v", err)
+		}
+
+	}
+
+	return nil
+}
+
+func setInStruct(envValue string, value reflect.Value, i int) error {
+	switch value.Field(i).Kind() {
+	case reflect.Int:
+		intValue, err := strconv.Atoi(envValue)
+		if err != nil {
+			return ErrMismatchedDataType
+		}
+		value.Field(i).SetInt(int64(intValue))
+	case reflect.Bool:
+		result := false
+		if envValue == "true" || envValue == "1" {
+			result = true
+		}
+		value.Field(i).SetBool(result)
+	case reflect.Float64:
+		floatValue, err := strconv.ParseFloat(envValue, 64)
+		if err != nil {
+			return ErrMismatchedDataType
+		}
+		value.Field(i).SetFloat(floatValue)
+	default:
 		value.Field(i).SetString(envValue)
 	}
 
@@ -165,10 +180,7 @@ func handlePrefix(value reflect.Value, i int, field reflect.StructField, key str
 		nestedField := nestedType.Field(ni)
 		nestedTag := nestedField.Tag.Get("env")
 
-		nestedKey, nestedOpts, err := keyAndOptions(key + nestedTag)
-		if err != nil {
-			return fmt.Errorf("processing key and option: %v", err)
-		}
+		nestedKey, nestedOpts := keyAndOptions(key + nestedTag)
 
 		envValue := os.Getenv(nestedKey)
 
@@ -178,6 +190,7 @@ func handlePrefix(value reflect.Value, i int, field reflect.StructField, key str
 
 		value.Field(i).Field(ni).SetString(envValue)
 	}
+
 	return nil
 }
 
@@ -186,10 +199,12 @@ func handleRequired(key string) error {
 	if envValue == "" {
 		return ErrRequiredFulfilled
 	}
+
 	return nil
 }
 
-func keyAndOptions(tag string) (string, options, error) {
+// keyAndOptions separates the key within the `env` struct tag from the options
+func keyAndOptions(tag string) (string, options) {
 	parts := strings.Split(tag, ",")
 
 	key, tagOpts := strings.TrimSpace(parts[0]), parts[1:]
@@ -205,5 +220,18 @@ func keyAndOptions(tag string) (string, options, error) {
 		}
 	}
 
-	return key, opts, nil
+	return key, opts
+}
+
+// SetPopulate combines the functionality of SetVars and Populate.
+func SetPopulate(filename string, cfg interface{}) error {
+	if err := setVars(filename); err != nil {
+		return err
+	}
+
+	if err := populate(cfg); err != nil {
+		return err
+	}
+
+	return nil
 }

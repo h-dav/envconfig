@@ -9,8 +9,10 @@ import (
 
 func main() {
 	type ExampleConfig struct {
-		Example      string `env:"EXAMPLE,required"`
-		AnotherValue string `env:"ANOTHER_VALUE"`
+		Example      string  `env:"EXAMPLE,required"`
+		AnotherValue string  `env:"ANOTHER_VALUE"`
+		IntExample   int     `env:"INT_EXAMPLE"`
+		FloatExample float64 `env:"FLOAT_EXAMPLE"`
 		Service      struct {
 			Port string `env:"PORT"`
 			Name string `env:"NAME,required"`

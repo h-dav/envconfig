@@ -63,4 +63,10 @@ if err := envconfig.Populate(&cfg); err != nil {
 ...
 ```
 
+## Supported types
+
+- Int
+- String
+- Float64
+
 [![Go Reference](https://pkg.go.dev/badge/gitlab.com/hcdav/envconfig.svg)](https://pkg.go.dev/gitlab.com/hcdav/envconfig)
