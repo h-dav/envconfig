@@ -18,13 +18,19 @@ type pair struct {
 
 // options are included in the tag.
 type options struct {
-	prefix   bool
+	// prefix is used for nested structures.
+	prefix bool
+	// required fields will fail if they are not set in the OS values.
 	required bool
 }
 
 const (
-	optPrefix   = "prefix"
-	optRequired = "required"
+	OptPrefix   = "prefix"
+	OptRequired = "required"
+)
+
+var (
+	ErrRequiredFulfilled = errors.New("required value is not set")
 )
 
 // SetPopulate combines the functionality of SetVars and Populate.
@@ -164,15 +170,10 @@ func handlePrefix(value reflect.Value, i int, field reflect.StructField, key str
 			return fmt.Errorf("processing key and option: %v", err)
 		}
 
-		if nestedOpts.required {
-			if err := handleRequired(nestedKey); err != nil {
-				return fmt.Errorf("checking for required value: %v", err)
-			}
-		}
-
 		envValue := os.Getenv(nestedKey)
-		if envValue == "" {
-			continue
+
+		if envValue == "" && nestedOpts.required {
+			return ErrRequiredFulfilled
 		}
 
 		value.Field(i).Field(ni).SetString(envValue)
@@ -183,7 +184,7 @@ func handlePrefix(value reflect.Value, i int, field reflect.StructField, key str
 func handleRequired(key string) error {
 	envValue := os.Getenv(key)
 	if envValue == "" {
-		return fmt.Errorf("value does not exist for struct tag: %v", key)
+		return ErrRequiredFulfilled
 	}
 	return nil
 }
@@ -197,9 +198,9 @@ func keyAndOptions(tag string) (string, options, error) {
 
 	for _, o := range tagOpts {
 		switch {
-		case o == optPrefix:
+		case o == OptPrefix:
 			opts.prefix = true
-		case o == optRequired:
+		case o == OptRequired:
 			opts.required = true
 		}
 	}
