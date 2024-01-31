@@ -17,16 +17,16 @@ type pair struct {
 	value string
 }
 
-// options are included in the tag.
 type options struct {
-	// prefix is used for nested structures.
-	prefix bool
-	// required fields will fail if they are not set in the OS values.
+	prefix   bool
 	required bool
 }
 
+// Options are included in the tag.
 const (
-	OptPrefix   = "prefix"
+	// OptPrefix is used for nested structures.
+	OptPrefix = "prefix"
+	// OptRequired will fail if the value is not set in the env variables.
 	OptRequired = "required"
 )
 
@@ -40,11 +40,30 @@ func SetVars(filename string) error {
 	return setVars(filename)
 }
 
+// Populate will map values from the environment variables into the struct passed in.
+func Populate(cfg interface{}) error {
+	return populate(cfg)
+}
+
+// SetPopulate combines the functionality of SetVars and Populate.
+func SetPopulate(filename string, cfg interface{}) error {
+	if err := setVars(filename); err != nil {
+		return err
+	}
+
+	if err := populate(cfg); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func setVars(filename string) error {
 	reader, file, err := streamFile(filename)
 	if err != nil {
 		return err
 	}
+
 	defer file.Close()
 
 	for {
@@ -53,7 +72,7 @@ func setVars(filename string) error {
 			if err == io.EOF {
 				break // Reached end of file.
 			} else {
-				return err // Handle other errors.
+				return err
 			}
 		}
 
@@ -93,11 +112,6 @@ func streamFile(filename string) (*bufio.Reader, *os.File, error) {
 	return bufio.NewReader(file), file, nil
 }
 
-// Populate will map values from the OS into the struct passed in.
-func Populate(cfg interface{}) error {
-	return populate(cfg)
-}
-
 func populate(cfg interface{}) error {
 	value := reflect.ValueOf(cfg)
 	if value.Kind() != reflect.Ptr || value.IsNil() {
@@ -116,14 +130,14 @@ func populate(cfg interface{}) error {
 
 		key, opts := keyAndOptions(tag)
 
-		// Check if the tag in the struct is set in the OS `required`
+		// Check if the env struct key for the field is set in the environment variables.
 		if opts.required {
 			if err := handleRequired(key); err != nil {
 				return fmt.Errorf("handling required option: %v", err)
 			}
 		}
 
-		// Populate the nested prefix struct (All nested structs must use `prefix`).
+		// Populate the nested struct (All nested structs must use `prefix`).
 		if opts.prefix {
 			if err := handlePrefix(value, i, field, key); err != nil {
 				return fmt.Errorf("handling prefix option: %v", err)
@@ -139,7 +153,6 @@ func populate(cfg interface{}) error {
 		if err := setInStruct(envValue, value.Field(i)); err != nil {
 			return fmt.Errorf("setting value in config struct: %v", err)
 		}
-
 	}
 
 	return nil
@@ -147,7 +160,7 @@ func populate(cfg interface{}) error {
 
 func setInStruct(envValue string, value reflect.Value) error {
 	switch value.Kind() {
-	case reflect.Int:
+	case reflect.Int, reflect.Int32, reflect.Int64:
 		intValue, err := strconv.Atoi(envValue)
 		if err != nil {
 			return ErrMismatchedDataType
@@ -205,7 +218,7 @@ func handleRequired(key string) error {
 	return nil
 }
 
-// keyAndOptions separates the key within the `env` struct tag from the options
+// keyAndOptions separates the key within the `env` struct tag key from the options.
 func keyAndOptions(tag string) (string, options) {
 	parts := strings.Split(tag, ",")
 
@@ -223,17 +236,4 @@ func keyAndOptions(tag string) (string, options) {
 	}
 
 	return key, opts
-}
-
-// SetPopulate combines the functionality of SetVars and Populate.
-func SetPopulate(filename string, cfg interface{}) error {
-	if err := setVars(filename); err != nil {
-		return err
-	}
-
-	if err := populate(cfg); err != nil {
-		return err
-	}
-
-	return nil
 }
