@@ -17,12 +17,14 @@ type ExampleConfig struct {
 	Service      struct {
 		Port int64  `env:"PORT"`
 		Name string `env:"NAME,required"`
-	} `env:"HTTP_,prefix"`
+	} `env:"prefix=HTTP_"`
+	ExampleEndpoint string `env:"EXAMPLE_ENDPOINT"`
+	DefaultValue    string `env:"DEFAULT_VALUE,default=thevalue"`
 }
 
 func main() {
 	cfg := ExampleConfig{}
-	if err := envconfig.SetPopulate(filepath.Join("examples", "example.env"), &cfg); err != nil {
+	if err := envconfig.SetPopulate(filepath.Join("config", "example.env"), &cfg); err != nil {
 		log.Fatal(err)
 	}
 

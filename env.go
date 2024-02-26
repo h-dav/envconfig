@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"reflect"
+	"regexp"
 	"strconv"
 	"strings"
 )
@@ -18,8 +19,9 @@ type pair struct {
 }
 
 type options struct {
-	prefix   bool
-	required bool
+	prefix       bool
+	required     bool
+	defaultValue bool
 }
 
 // Options are included in the tag.
@@ -28,11 +30,17 @@ const (
 	OptPrefix = "prefix"
 	// OptRequired will fail if the value is not set in the env variables.
 	OptRequired = "required"
+	// OptDefault will be the value that is fallen back to if an env variable is not set.
+	OptDefault = "default"
 )
 
 var (
-	ErrRequiredFulfilled  = errors.New("required value is not set")
+	// ErrRequiredFulfilled occurs when an environment variable is not populated but is required by the config structure.
+	ErrRequiredFulfilled = errors.New("required value is not set")
+	// ErrMismatchedDataType occurs when an environment variables value cannot be parsed into the config structure's data type.
 	ErrMismatchedDataType = errors.New("data types do not match")
+	// ErrTextReplacement occurs when an environment variable is not set at the point of text replacement.
+	ErrTextReplacement = errors.New("required value is not set for text replacement")
 )
 
 // SetVars reads a .env file and then writes the values to os env variables.
@@ -71,12 +79,14 @@ func setVars(filename string) error {
 		if err != nil {
 			if err == io.EOF {
 				break // Reached end of file.
-			} else {
-				return err
 			}
+			return err
 		}
 
-		pair := entryConvert(strings.TrimSuffix(line, "\n"))
+		pair, err := entryConvert(strings.TrimSuffix(line, "\n"))
+		if err != nil {
+			return err
+		}
 
 		err = setEnvValue(pair)
 		if err != nil {
@@ -87,9 +97,28 @@ func setVars(filename string) error {
 	return nil
 }
 
-func entryConvert(line string) pair {
+func entryConvert(line string) (pair, error) {
 	newVar := strings.Split(line, "=")
-	return pair{key: newVar[0], value: newVar[1]}
+	value := newVar[1]
+
+	for {
+		re := regexp.MustCompile(`\$\{([^}]*)\}`)
+		match := re.FindStringSubmatch(value)
+
+		if len(match) != 0 {
+			matchedEnvValue := os.Getenv(match[1])
+			if matchedEnvValue == "" {
+				return pair{}, errors.New("failed")
+			}
+
+			value = strings.Replace(value, match[0], matchedEnvValue, 1)
+
+			continue
+		}
+		break
+	}
+
+	return pair{key: newVar[0], value: value}, nil
 }
 
 func setEnvValue(pair pair) error {
@@ -112,6 +141,7 @@ func streamFile(filename string) (*bufio.Reader, *os.File, error) {
 	return bufio.NewReader(file), file, nil
 }
 
+// populate populates the config structure passed in.
 func populate(cfg interface{}) error {
 	value := reflect.ValueOf(cfg)
 	if value.Kind() != reflect.Ptr || value.IsNil() {
@@ -130,6 +160,8 @@ func populate(cfg interface{}) error {
 
 		key, opts := keyAndOptions(tag)
 
+		fmt.Println(opts.defaultValue)
+
 		// Check if the env struct key for the field is set in the environment variables.
 		if opts.required {
 			if err := handleRequired(key); err != nil {
@@ -143,6 +175,12 @@ func populate(cfg interface{}) error {
 				return fmt.Errorf("handling prefix option: %v", err)
 			}
 			continue
+		}
+
+		if opts.defaultValue {
+			if err := handleDefaultValue(key, value); err != nil {
+				return fmt.Errorf("handling default value option: %v", err)
+			}
 		}
 
 		envValue := os.Getenv(key)
@@ -182,6 +220,15 @@ func setInStruct(envValue string, value reflect.Value) error {
 		value.SetString(envValue)
 	}
 
+	return nil
+}
+
+// TODO: params needed - the field to set, the default value
+func handleDefaultValue(key string, value reflect.Value) error {
+	fmt.Println(key)
+	if err := setInStruct(key, value); err != nil {
+		return fmt.Errorf("setting default value in struct: %v", err)
+	}
 	return nil
 }
 
@@ -226,14 +273,22 @@ func keyAndOptions(tag string) (string, options) {
 
 	var opts options
 
+	if strings.HasPrefix(key, "prefix=") {
+		opts.prefix = true
+		key = strings.Split(key, "prefix=")[1]
+	}
+
+	// For options that do not need a value.
 	for _, o := range tagOpts {
+		fmt.Println(o)
 		switch {
-		case o == OptPrefix:
-			opts.prefix = true
 		case o == OptRequired:
 			opts.required = true
+		case strings.HasPrefix(o, "default="):
+			key = strings.Split(o, "default=")[1]
 		}
 	}
+	fmt.Println(key)
 
 	return key, opts
 }
