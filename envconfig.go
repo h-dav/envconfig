@@ -83,6 +83,10 @@ func setVars(filename string) error {
 			return err
 		}
 
+		if strings.HasPrefix(line, "#") {
+			continue
+		}
+
 		pair, err := entryConvert(strings.TrimSuffix(line, "\n"))
 		if err != nil {
 			return err
