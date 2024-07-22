@@ -160,8 +160,6 @@ func populate(cfg interface{}) error {
 
 		key, opts := keyAndOptions(tag)
 
-		fmt.Println(opts.defaultValue)
-
 		// Check if the env struct key for the field is set in the environment variables.
 		if opts.required {
 			if err := handleRequired(key); err != nil {
@@ -225,7 +223,6 @@ func setInStruct(envValue string, value reflect.Value) error {
 
 // TODO: params needed - the field to set, the default value
 func handleDefaultValue(key string, value reflect.Value) error {
-	fmt.Println(key)
 	if err := setInStruct(key, value); err != nil {
 		return fmt.Errorf("setting default value in struct: %v", err)
 	}
@@ -280,7 +277,6 @@ func keyAndOptions(tag string) (string, options) {
 
 	// For options that do not need a value.
 	for _, o := range tagOpts {
-		fmt.Println(o)
 		switch {
 		case o == OptRequired:
 			opts.required = true
@@ -288,7 +284,6 @@ func keyAndOptions(tag string) (string, options) {
 			key = strings.Split(o, "default=")[1]
 		}
 	}
-	fmt.Println(key)
 
 	return key, opts
 }
