@@ -35,8 +35,8 @@ const (
 )
 
 var (
-	// ErrRequiredFulfilled occurs when an environment variable is not populated but is required by the config structure.
-	ErrRequiredFulfilled = errors.New("required value is not set")
+	// ErrRequiredNotFulfilled occurs when an environment variable is not populated but is required by the config structure.
+	ErrRequiredNotFulfilled = errors.New("required value is not set")
 	// ErrMismatchedDataType occurs when an environment variables value cannot be parsed into the config structure's data type.
 	ErrMismatchedDataType = errors.New("data types do not match")
 	// ErrTextReplacement occurs when an environment variable is not set at the point of text replacement.
@@ -78,9 +78,13 @@ func setVars(filename string) error {
 		line, err := reader.ReadString('\n')
 		if err != nil {
 			if err == io.EOF {
-				break // Reached end of file.
+				break
 			}
 			return err
+		}
+
+		if strings.HasPrefix(line, "#") {
+			continue
 		}
 
 		pair, err := entryConvert(strings.TrimSuffix(line, "\n"))
@@ -242,7 +246,11 @@ func handlePrefix(value reflect.Value, i int, field reflect.StructField, key str
 		envValue := os.Getenv(nestedKey)
 
 		if envValue == "" && nestedOpts.required {
-			return ErrRequiredFulfilled
+			return ErrRequiredNotFulfilled
+		}
+
+		if envValue == "" {
+			continue
 		}
 
 		if err := setInStruct(envValue, value.Field(i).Field(ni)); err != nil {
@@ -256,7 +264,7 @@ func handlePrefix(value reflect.Value, i int, field reflect.StructField, key str
 func handleRequired(key string) error {
 	envValue := os.Getenv(key)
 	if envValue == "" {
-		return ErrRequiredFulfilled
+		return ErrRequiredNotFulfilled
 	}
 
 	return nil
