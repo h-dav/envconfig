@@ -1,3 +1,3 @@
-module gitlab.com/hcdav/envconfig
+module github.com/h-dav/envconfig
 
 go 1.22

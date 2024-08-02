@@ -5,7 +5,7 @@ import (
 	"log"
 	"path/filepath"
 
-	"gitlab.com/hcdav/envconfig"
+	"github.com/h-dav/envconfig"
 )
 
 type ExampleConfig struct {

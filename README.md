@@ -16,7 +16,7 @@ import (
 	"log"
 	"path/filepath"
 
-	"gitlab.com/hcdav/envconfig"
+	"github.com/h-dav/envconfig"
 )
 
 // ExampleConfig is your config struct using `env` struct tags.
@@ -102,4 +102,4 @@ if err := envconfig.Populate(&cfg); err != nil {
 - String
 - Float64
 
-[![Go Reference](https://pkg.go.dev/badge/gitlab.com/hcdav/envconfig.svg)](https://pkg.go.dev/gitlab.com/hcdav/envconfig)
+[![Go Reference](https://pkg.go.dev/badge/github.com/h-dav/envconfig.svg)](https://pkg.go.dev/github.com/h-dav/envconfig)
