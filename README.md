@@ -83,15 +83,17 @@ Code:
 ```go
 ...
 type ExampleConfig struct {
-    Example      string  `env:"EXAMPLE,required"`
-    AnotherValue string  `env:"ANOTHER_VALUE"`
-    IntExample   int     `env:"INT_EXAMPLE"`
-    Int32Example int32   `env:"INT32_EXAMPLE"`
-    FloatExample float64 `env:"FLOAT_EXAMPLE"`
-    Service      struct {
-        Port int64  `env:"PORT"`
-        Name string `env:"NAME,required"`
-    } `env:"HTTP_,prefix"`
+	Example      string  `env:"EXAMPLE,required"`
+	AnotherValue string  `env:"ANOTHER_VALUE"`
+	IntExample   int     `env:"INT_EXAMPLE"`
+	Int32Example int32   `env:"INT32_EXAMPLE"`
+	FloatExample float64 `env:"FLOAT_EXAMPLE"`
+	Service      struct {
+		Port int64  `env:"PORT"`
+		Name string `env:"NAME,required"`
+	} `env:"prefix=HTTP_"`
+	ExampleEndpoint string `env:"EXAMPLE_ENDPOINT"`
+	DefaultValue    string `env:"DEFAULT_VALUE,default=thevalue"`
 }
 
 cfg := ExampleConfig{}
@@ -100,6 +102,14 @@ if err := envconfig.Populate(&cfg); err != nil {
 }
 ...
 ```
+
+## Options
+
+| Tag Option | Type       | Example                |
+| ---------- | ---------- | ---------------------- |
+| default    | assignment | env:"KEY,default=dval" |
+| prefix     | assignment | env:"prefix=pstruct_"  |
+| required   | flag       | env:"KEYNAME,required" |
 
 ## Supported types
 
