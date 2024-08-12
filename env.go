@@ -21,7 +21,7 @@ type pair struct {
 type options struct {
 	prefix       bool
 	required     bool
-	defaultValue bool
+	defaultValue string
 }
 
 // Options are included in the tag.
@@ -179,15 +179,12 @@ func populate(cfg interface{}) error {
 			continue
 		}
 
-		if opts.defaultValue {
-			if err := handleDefaultValue(key, value); err != nil {
-				return fmt.Errorf("handling default value option: %v", err)
-			}
-		}
-
 		envValue := os.Getenv(key)
 		if envValue == "" {
-			continue
+			if opts.defaultValue == "" {
+				continue
+			}
+			envValue = opts.defaultValue
 		}
 
 		if err := setInStruct(envValue, value.Field(i)); err != nil {
@@ -222,14 +219,6 @@ func setInStruct(envValue string, value reflect.Value) error {
 		value.SetString(envValue)
 	}
 
-	return nil
-}
-
-// TODO: params needed - the field to set, the default value
-func handleDefaultValue(key string, value reflect.Value) error {
-	if err := setInStruct(key, value); err != nil {
-		return fmt.Errorf("setting default value in struct: %v", err)
-	}
 	return nil
 }
 
@@ -289,7 +278,7 @@ func keyAndOptions(tag string) (string, options) {
 		case o == OptRequired:
 			opts.required = true
 		case strings.HasPrefix(o, "default="):
-			key = strings.Split(o, "default=")[1]
+			opts.defaultValue = strings.Split(o, "default=")[1]
 		}
 	}
 

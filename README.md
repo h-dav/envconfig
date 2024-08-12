@@ -1,6 +1,6 @@
 # envconfig
 
-A low dependency package for .env files.
+A low dependency package for .env files (or just environment variables).
 
 ## Usage
 
@@ -29,16 +29,18 @@ type ExampleConfig struct {
 	Service      struct {
 		Port int64  `env:"PORT"`
 		Name string `env:"NAME,required"`
-	} `env:"HTTP_,prefix"`
+	} `env:"prefix=HTTP_"`
+	ExampleEndpoint string `env:"EXAMPLE_ENDPOINT"`
+	DefaultValue    string `env:"DEFAULT_VALUE,default=thevalue"`
 }
 
 func main() {
 	cfg := ExampleConfig{}
-	if err := envconfig.SetPopulate(filepath.Join("examples", "example.env"), &cfg); err != nil {
+	if err := envconfig.SetPopulate(filepath.Join("config", "example.env"), &cfg); err != nil {
 		log.Fatal(err)
 	}
 
-	fmt.Printf("Populated Config: %v", cfg)
+	fmt.Printf("Populated Config: %+v\n", cfg)
 }
 ```
 
@@ -49,15 +51,18 @@ EXAMPLE=value
 ANOTHER_VALUE=v0.0.0
 INT_EXAMPLE=4
 INT32_EXAMPLE=23
+#COMMENTED_EXAMPLE=test
 FLOAT_EXAMPLE=4.44
 HTTP_PORT=9999
 HTTP_NAME=example_name
+DNS=example.com
+EXAMPLE_ENDPOINT=https://${DNS}/v1
 ```
 
 Output:
 
 ```
-Populated Config: {value v0.0.0 4 23 4.44 {9999 example_name}}
+Populated Config: {Example:value AnotherValue:v0.0.0 IntExample:4 Int32Example:23 FloatExample:4.44 Service:{Port:9999 Name:example_name} ExampleEndpoint:https://example.com/v1 DefaultValue:thevalue}
 ```
 
 

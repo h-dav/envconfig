@@ -28,5 +28,5 @@ func main() {
 		log.Fatal(err)
 	}
 
-	fmt.Printf("Populated Config: %v", cfg)
+	fmt.Printf("Populated Config: %+v\n", cfg)
 }
