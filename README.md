@@ -2,6 +2,12 @@
 
 A low dependency package for .env files (or just environment variables).
 
+## Install
+
+```bash
+go get github.com/h-dav/envconfig
+```
+
 ## Usage
 
 ### Set environment variables and populate a struct:
@@ -65,10 +71,10 @@ Output:
 Populated Config: {Example:value AnotherValue:v0.0.0 IntExample:4 Int32Example:23 FloatExample:4.44 Service:{Port:9999 Name:example_name} ExampleEndpoint:https://example.com/v1 DefaultValue:thevalue}
 ```
 
-
 ### Example - Set environment variables
 
 Code:
+
 ```go
 ...
 if err := envconfig.SetVars(filepath.Join("examples", "example.env")); err != nil {
@@ -80,6 +86,7 @@ if err := envconfig.SetVars(filepath.Join("examples", "example.env")); err != ni
 ### Example - Populate a struct with environment variables
 
 Code:
+
 ```go
 ...
 type ExampleConfig struct {
