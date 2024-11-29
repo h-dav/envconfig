@@ -102,7 +102,7 @@ func setVars(filename string) error {
 }
 
 func entryConvert(line string) (pair, error) {
-	newVar := strings.Split(line, "=")
+	newVar := strings.Split(line, ": ")
 	value := newVar[1]
 
 	for {
