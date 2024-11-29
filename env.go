@@ -103,7 +103,7 @@ func setVars(filename string) error {
 
 func entryConvert(line string) (pair, error) {
 	newVar := strings.Split(line, ": ")
-	if len(newVar) > 1 {
+	if len(newVar) <= 1 {
 		return pair{}, fmt.Errorf("cannot parse config entry: %v", line)
 	}
 	value := newVar[1]
