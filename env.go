@@ -1,289 +1,222 @@
-// Package envconfig parses a .env file and loads the values into the os and returns a populated config structure.
 package envconfig
 
 import (
 	"bufio"
-	"errors"
-	"fmt"
-	"io"
 	"os"
+	"path/filepath"
 	"reflect"
-	"regexp"
 	"strconv"
 	"strings"
 )
 
-type pair struct {
-	key   string
-	value string
-}
-
-type options struct {
-	prefix       bool
-	required     bool
-	defaultValue string
-}
-
-// Options are included in the tag.
-const (
-	// OptPrefix is used for nested structures.
-	OptPrefix = "prefix"
-	// OptRequired will fail if the value is not set in the env variables.
-	OptRequired = "required"
-	// OptDefault will be the value that is fallen back to if an env variable is not set.
-	OptDefault = "default"
-)
-
-var (
-	// ErrRequiredNotFulfilled occurs when an environment variable is not populated but is required by the config structure.
-	ErrRequiredNotFulfilled = errors.New("required value is not set")
-	// ErrMismatchedDataType occurs when an environment variables value cannot be parsed into the config structure's data type.
-	ErrMismatchedDataType = errors.New("data types do not match")
-	// ErrTextReplacement occurs when an environment variable is not set at the point of text replacement.
-	ErrTextReplacement = errors.New("required value is not set for text replacement")
-)
-
-// SetVars reads a .env file and then writes the values to os env variables.
-func SetVars(filename string) error {
-	return setVars(filename)
-}
-
-// Populate will map values from the environment variables into the struct passed in.
-func Populate(cfg interface{}) error {
-	return populate(cfg)
-}
-
-// SetPopulate combines the functionality of SetVars and Populate.
-func SetPopulate(filename string, cfg interface{}) error {
-	if err := setVars(filename); err != nil {
+// Set will firstly set your .env file variables into the environment variables, then populate the passed struct
+// using all environment variables.
+func Set(filename string, config any) error {
+	if err := setEnvironmentVariables(filename); err != nil {
 		return err
 	}
 
-	if err := populate(cfg); err != nil {
+	if err := populateConfig(config); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func setVars(filename string) error {
-	reader, file, err := streamFile(filename)
+func setEnvironmentVariables(filename string) error {
+	file, err := os.Open(filepath.Clean(filename))
 	if err != nil {
-		return err
+		return &OpenFileError{Err: err}
 	}
+	defer file.Close() //nolint:errcheck // File closure.
 
-	defer file.Close()
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		text := scanner.Text()
 
-	for {
-		line, err := reader.ReadString('\n')
-		if err != nil {
-			if err == io.EOF {
-				break
-			}
-			return err
-		}
-
-		if strings.HasPrefix(line, "#") {
+		if text == "" {
 			continue
 		}
 
-		pair, err := entryConvert(strings.TrimSuffix(line, "\n"))
-		if err != nil {
-			return err
+		// Handles commented lines.
+		if strings.HasPrefix(text, "#") {
+			continue
 		}
 
-		err = setEnvValue(pair)
-		if err != nil {
-			return err
+		split := strings.SplitN(text, ":", 2) //nolint:mnd // "Magic number" is reasonable in this case.
+		for i, v := range split {
+			split[i] = strings.TrimSpace(v)
+		}
+
+		if err := os.Setenv(split[0], split[1]); err != nil {
+			return &SetEnvironmentVariableError{Err: err}
 		}
 	}
 
 	return nil
 }
 
-func entryConvert(line string) (pair, error) {
-	newVar := strings.Split(line, ": ")
-	if len(newVar) <= 1 {
-		return pair{}, fmt.Errorf("cannot parse config entry: %v", line)
-	}
-	value := newVar[1]
-
-	for {
-		re := regexp.MustCompile(`\$\{([^}]*)\}`)
-		match := re.FindStringSubmatch(value)
-
-		if len(match) != 0 {
-			matchedEnvValue := os.Getenv(match[1])
-			if matchedEnvValue == "" {
-				return pair{}, errors.New("failed")
-			}
-
-			value = strings.Replace(value, match[0], matchedEnvValue, 1)
-
-			continue
-		}
-		break
+func populateConfig(config any) error {
+	configStruct := reflect.ValueOf(config)
+	if configStruct.Kind() != reflect.Ptr || configStruct.Elem().Kind() != reflect.Struct {
+		return &InvalidConfigTypeError{ProvidedType: config}
 	}
 
-	return pair{key: newVar[0], value: value}, nil
-}
+	configValue := reflect.ValueOf(config).Elem()
 
-func setEnvValue(pair pair) error {
-	err := os.Setenv(pair.key, pair.value)
-	if err != nil {
-		return err
-	}
+	for i := range configValue.NumField() {
+		field := configValue.Type().Field(i)
+		configFieldValue := configValue.Field(i)
 
-	return nil
-}
-
-// Remember to close the file after reading from Reader is done.
-func streamFile(filename string) (*bufio.Reader, *os.File, error) {
-	file, err := os.Open(filename)
-	if err != nil {
-		file.Close()
-		return nil, nil, err
-	}
-
-	return bufio.NewReader(file), file, nil
-}
-
-// populate populates the config structure passed in.
-func populate(cfg interface{}) error {
-	value := reflect.ValueOf(cfg)
-	if value.Kind() != reflect.Ptr || value.IsNil() {
-		return errors.New("input must be a non-nil pointer to a struct")
-	}
-
-	value = value.Elem()
-	if value.Kind() != reflect.Struct {
-		return errors.New("input must be a pointer to a struct")
-	}
-
-	vType := value.Type()
-	for i := 0; i < value.NumField(); i++ {
-		field := vType.Field(i)
-		tag := field.Tag.Get("env")
-
-		key, opts := keyAndOptions(tag)
-
-		// Check if the env struct key for the field is set in the environment variables.
-		if opts.required {
-			if err := handleRequired(key); err != nil {
-				return fmt.Errorf("handling required option: %v", err)
-			}
+		if err := handlePrefixOption(field, configFieldValue); err != nil {
+			return err
 		}
 
-		// Populate the nested struct (All nested structs must use `prefix`).
-		if opts.prefix {
-			if err := handlePrefix(value, i, field, key); err != nil {
-				return fmt.Errorf("handling prefix option: %v", err)
-			}
+		envVariableName := field.Tag.Get("env")
+		if envVariableName == "" {
 			continue
 		}
 
-		envValue := os.Getenv(key)
+		envValue := fetchEnvValue(envVariableName, field)
 		if envValue == "" {
-			if opts.defaultValue == "" {
-				continue
+			if err := checkRequiredOption(envVariableName, field); err != nil {
+				return err
 			}
-			envValue = opts.defaultValue
-		}
 
-		if err := setInStruct(envValue, value.Field(i)); err != nil {
-			return fmt.Errorf("setting value in config struct: %v", err)
-		}
-	}
-
-	return nil
-}
-
-func setInStruct(envValue string, value reflect.Value) error {
-	switch value.Kind() {
-	case reflect.Int, reflect.Int32, reflect.Int64:
-		intValue, err := strconv.Atoi(envValue)
-		if err != nil {
-			return ErrMismatchedDataType
-		}
-		value.SetInt(int64(intValue))
-	case reflect.Bool:
-		result := false
-		if envValue == "true" || envValue == "1" {
-			result = true
-		}
-		value.SetBool(result)
-	case reflect.Float64:
-		floatValue, err := strconv.ParseFloat(envValue, 64)
-		if err != nil {
-			return ErrMismatchedDataType
-		}
-		value.SetFloat(floatValue)
-	default:
-		value.SetString(envValue)
-	}
-
-	return nil
-}
-
-func handlePrefix(value reflect.Value, i int, field reflect.StructField, key string) error {
-	nestedStruct := value.Field(i)
-	nestedType := field.Type
-
-	for ni := 0; ni < nestedStruct.NumField(); ni++ {
-		nestedField := nestedType.Field(ni)
-		nestedTag := nestedField.Tag.Get("env")
-
-		nestedKey, nestedOpts := keyAndOptions(key + nestedTag)
-
-		envValue := os.Getenv(nestedKey)
-
-		if envValue == "" && nestedOpts.required {
-			return ErrRequiredNotFulfilled
-		}
-
-		if envValue == "" {
 			continue
 		}
 
-		if err := setInStruct(envValue, value.Field(i).Field(ni)); err != nil {
-			return fmt.Errorf("setting nested struct value: %v", err)
+		if err := setFieldValue(configFieldValue, envValue, envVariableName); err != nil {
+			return err
 		}
 	}
 
 	return nil
 }
 
-func handleRequired(key string) error {
-	envValue := os.Getenv(key)
+func fetchEnvValue(envVariableName string, field reflect.StructField) string {
+	envValue := os.Getenv(envVariableName)
+
 	if envValue == "" {
-		return ErrRequiredNotFulfilled
+		defaultOptionValue, defaultOptionSet := field.Tag.Lookup("default")
+		if defaultOptionSet {
+			envValue = defaultOptionValue
+		}
+	}
+
+	return envValue
+}
+
+func handlePrefixOption(field reflect.StructField, configFieldValue reflect.Value) error {
+	if field.Type.Kind() == reflect.Struct {
+		prefixOptionValue, prefixOptionSet := field.Tag.Lookup("prefix")
+		if !prefixOptionSet {
+			return &PrefixOptionError{
+				ParamName: field.Name,
+			}
+		}
+
+		if prefixOptionSet {
+			if err := populateNestedConfig(configFieldValue, prefixOptionValue); err != nil {
+				return err
+			}
+		}
 	}
 
 	return nil
 }
 
-// keyAndOptions separates the key within the `env` struct tag key from the options.
-func keyAndOptions(tag string) (string, options) {
-	parts := strings.Split(tag, ",")
-
-	key, tagOpts := strings.TrimSpace(parts[0]), parts[1:]
-
-	var opts options
-
-	if strings.HasPrefix(key, "prefix=") {
-		opts.prefix = true
-		key = strings.Split(key, "prefix=")[1]
+func checkRequiredOption(envVariableName string, field reflect.StructField) error {
+	requiredOptionValue, requiredOptionSet := field.Tag.Lookup("required")
+	if !requiredOptionSet {
+		return nil
 	}
 
-	// For options that do not need a value.
-	for _, o := range tagOpts {
-		switch {
-		case o == OptRequired:
-			opts.required = true
-		case strings.HasPrefix(o, "default="):
-			opts.defaultValue = strings.Split(o, "default=")[1]
+	requiredOption, err := strconv.ParseBool(requiredOptionValue)
+	if requiredOption {
+		return &RequiredFieldError{ParamName: envVariableName}
+	} else if err != nil {
+		return &InvalidOptionConversionError{
+			ParamName: envVariableName,
+			Option:    "required",
+			Err:       err,
 		}
 	}
 
-	return key, opts
+	return nil
+}
+
+func populateNestedConfig(nestedConfig reflect.Value, prefix string) error {
+	for i := range nestedConfig.NumField() {
+		field := nestedConfig.Type().Field(i)
+		configFieldValue := nestedConfig.Field(i)
+
+		envVariableName := prefix + field.Tag.Get("env")
+		if envVariableName == "" {
+			continue
+		}
+
+		envValue := fetchEnvValue(envVariableName, field)
+		if envValue == "" {
+			if err := checkRequiredOption(envVariableName, field); err != nil {
+				return err
+			}
+
+			continue
+		}
+
+		if err := setFieldValue(configFieldValue, envValue, envVariableName); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func setFieldValue(
+	configFieldValue reflect.Value,
+	envValue string,
+	envVariableName string,
+) error {
+	switch configFieldValue.Interface().(type) {
+	case string:
+		configFieldValue.SetString(envValue)
+	case int:
+		envValue, err := strconv.Atoi(envValue)
+		if err != nil {
+			return &ParamConversionError{
+				ParamName:  envVariableName,
+				TargetType: "int",
+				Err:        err,
+			}
+		}
+
+		configFieldValue.SetInt(int64(envValue))
+	case bool:
+		envValue, err := strconv.ParseBool(envValue)
+		if err != nil {
+			return &ParamConversionError{
+				ParamName:  envVariableName,
+				TargetType: "bool",
+				Err:        err,
+			}
+		}
+
+		configFieldValue.SetBool(envValue)
+	case float64:
+		envValue, err := strconv.ParseFloat(envValue, 64)
+		if err != nil {
+			return &ParamConversionError{
+				ParamName:  envVariableName,
+				TargetType: "float",
+				Err:        err,
+			}
+		}
+
+		configFieldValue.SetFloat(envValue)
+	default:
+		return &UnsupportedFieldTypeError{FieldType: configFieldValue.Interface()}
+	}
+
+	return nil
 }
