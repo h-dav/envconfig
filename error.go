@@ -95,3 +95,11 @@ type PrefixOptionError struct {
 func (e *PrefixOptionError) Error() string {
 	return fmt.Sprintf("prefix option is not set for nested struct field: %q", e.ParamName)
 }
+
+type ReplacementError struct {
+	VariableName string
+}
+
+func (e *ReplacementError) Error() string {
+	return fmt.Sprintf("environment variable for replacement is not set: %q", e.VariableName)
+}

@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"regexp"
 	"strconv"
 	"strings"
 )
@@ -48,6 +49,11 @@ func setEnvironmentVariables(filename string) error {
 			split[i] = strings.TrimSpace(v)
 		}
 
+		err = handleTextReplacement(&split[1])
+		if err != nil {
+			return err
+		}
+
 		if err := os.Setenv(split[0], split[1]); err != nil {
 			return &SetEnvironmentVariableError{Err: err}
 		}
@@ -89,6 +95,25 @@ func populateConfig(config any) error {
 		if err := setFieldValue(configFieldValue, environmentVariable, envVariableName); err != nil {
 			return err
 		}
+	}
+
+	return nil
+}
+
+func handleTextReplacement(value *string) error {
+	re := regexp.MustCompile(`\${[^}]+}`)
+	match := re.FindStringSubmatch(*value)
+
+	for _, m := range match {
+		envValue := strings.TrimPrefix(m, "${")
+		envValue = strings.TrimSuffix(envValue, "}")
+
+		matchedEnvValue := os.Getenv(envValue)
+		if matchedEnvValue == "" {
+			return &ReplacementError{VariableName: envValue}
+		}
+
+		*value = strings.ReplaceAll(*value, m, matchedEnvValue)
 	}
 
 	return nil
@@ -173,7 +198,7 @@ func checkRequiredOption(envVariableName string, field reflect.StructField) erro
 	return nil
 }
 
-func setFieldValue(
+func setFieldValue( //nolint:gocognit,gocyclo // Switch case required high complexity to cover supported types.
 	configFieldValue reflect.Value,
 	envValue string,
 	envVariableName string,
@@ -214,6 +239,56 @@ func setFieldValue(
 		}
 
 		configFieldValue.SetFloat(envValue)
+	case []string:
+		values := strings.Split(envValue, ",")
+		slice := reflect.MakeSlice(configFieldValue.Type(), len(values), len(values))
+
+		for i, v := range values {
+			v = strings.TrimSpace(v)
+			slice.Index(i).SetString(strings.TrimSpace(v))
+		}
+
+		configFieldValue.Set(slice)
+	case []int:
+		values := strings.Split(envValue, ",")
+		slice := reflect.MakeSlice(configFieldValue.Type(), len(values), len(values))
+
+		for i, v := range values {
+			v = strings.TrimSpace(v)
+
+			parsed, err := strconv.Atoi(v)
+			if err != nil {
+				return &ParamConversionError{
+					ParamName:  envVariableName,
+					TargetType: "[]int",
+					Err:        err,
+				}
+			}
+
+			slice.Index(i).SetInt(int64(parsed))
+		}
+
+		configFieldValue.Set(slice)
+	case []float64:
+		values := strings.Split(envValue, ",")
+		slice := reflect.MakeSlice(configFieldValue.Type(), len(values), len(values))
+
+		for i, v := range values {
+			v = strings.TrimSpace(v)
+
+			parsed, err := strconv.ParseFloat(v, 64)
+			if err != nil {
+				return &ParamConversionError{
+					ParamName:  envVariableName,
+					TargetType: "[]float64",
+					Err:        err,
+				}
+			}
+
+			slice.Index(i).SetFloat(parsed)
+		}
+
+		configFieldValue.Set(slice)
 	default:
 		return &UnsupportedFieldTypeError{FieldType: configFieldValue.Interface()}
 	}

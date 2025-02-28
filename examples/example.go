@@ -13,6 +13,7 @@ type config struct {
 	Server      struct {
 		Port string `env:"PORT"`
 	} `prefix:"SERVER_"`
+	List []string `env:"LIST"`
 }
 
 func main() {
