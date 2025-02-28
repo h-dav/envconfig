@@ -9,8 +9,6 @@ linters:
     - containedctx
     - contextcheck
     - copyloopvar
-    - cyclop
-#   - decorder # Sometimes it is more expressive to order declarations in a certain way.
     - depguard
     - dogsled
     - dupl
@@ -24,11 +22,8 @@ linters:
     - exhaustive
     - exhaustruct
     - fatcontext
-#   - forbidigo # Will be enabled if something needs to be forbidden.
     - forcetypeassert
     - funlen
-#   - gci # Prefer goimports behaviour.
-#   - ginkgolinter # No plans to use ginkgo for testing, prefer using std "testing".
     - gocheckcompilerdirectives
     - gochecknoglobals
     - gochecknoinits
@@ -41,10 +36,8 @@ linters:
     - godox
     - gofmt
     - gofumpt
-#   - goheader # I don't use file headers.
     - goimports
     - gomoddirectives
-#   - gomodguard # Prefer depguard.
     - goprintffuncname
     - gosec
     - gosimple
@@ -52,14 +45,11 @@ linters:
     - govet
     - grouper
     - iface
-#   - importas # Enabled as needed per project.
     - inamedparam
     - ineffassign
     - interfacebloat
     - intrange
     - ireturn
-#   - lll # Go code can be more expressive and readable on a single line.
-#   - loggercheck # No plans to use external logging libraries, prefer using std "log/slog".
     - maintidx
     - makezero
     - mirror
@@ -73,13 +63,11 @@ linters:
     - nlreturn
     - noctx
     - nolintlint
-#   - nonamedreturns # Naked retursn disabled through nakedret.
     - nosprintfhostport
     - paralleltest
     - perfsprint
     - prealloc
     - predeclared
-#   - promlinter # No plans to use Prometheus.
     - protogetter
     - reassign
     - recvcheck
@@ -94,7 +82,6 @@ linters:
     - tagliatelle
     - tenv
     - testableexamples
-#   - testifylint # No plans to use Testify for testing, prefer using std "testing".
     - testpackage
     - thelper
     - tparallel
@@ -102,12 +89,10 @@ linters:
     - unparam
     - unused
     - usestdlibvars
-#   - varnamelen # Too strict in most cases hindering expressiveness.
     - wastedassign
     - whitespace
     - wrapcheck
     - wsl
-#   - zerologlint # No plans to use zerolog, prefer using std "log/slog".
 linters-settings:
   copyloopvar:
     check-alias: true
@@ -117,11 +102,6 @@ linters-settings:
         list-mode: strict
         allow:
           - $gostd
-          - github.com/nickbryan/httputil
-          - github.com/nickbryan/slogutil
-          - github.com/go-playground/validator/v10
-          - github.com/google/go-cmp/cmp
-          - github.com/google/uuid
   errcheck:
     check-type-assertions: true
   exhaustive:
@@ -129,9 +109,6 @@ linters-settings:
       - switch
       - map
     default-signifies-exhaustive: true
-  exhaustruct:
-    exclude:
-      - '.+/httputil\.Endpoint$'
   funlen:
     ignore-comments: true
   gocognit:
@@ -143,7 +120,7 @@ linters-settings:
   gofumpt:
     extra-rules: true
   goimports:
-    local-prefixes: github.com/nickbryan
+    local-prefixes: github.com/h-dav
   grouper:
     const-require-grouping: true
     import-require-grouping: true
@@ -156,7 +133,6 @@ linters-settings:
       - empty
       - generic
       - stdlib
-      - httputil.Handler
   misspell:
     locale: US # US English is most common in software code so keep it familiar.
   nakedret:
@@ -200,15 +176,11 @@ linters-settings:
     sql-isolation-level: true
     tls-signature-scheme: true
     constant-kind: true
-  wrapcheck:
-    extra-ignore-sigs:
-      - httputil.Redirect
 issues:
   exclude-rules:
     - path: _test\.go
       linters:
         - containedctx
-        - cyclop
         - err113
         - exhaustruct
         - funlen

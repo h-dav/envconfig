@@ -1,6 +1,9 @@
 # envconfig
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/h-dav/envconfig.svg)](https://pkg.go.dev/github.com/h-dav/envconfig)
+[![Go Report Card](https://goreportcard.com/badge/github.com/h-dav/envconfig/v2)](https://goreportcard.com/report/github.com/h-dav/envconfig/v2)
+[![Test](https://github.com/h-dav/envconfig/actions/workflows/test.yml/badge.svg)](https://github.com/h-dav/envconfig/actions/workflows/test.yml)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/h-dav/envconfig/blob/main/LICENSE)
 
 A low dependency package for .env files.
 
@@ -42,6 +45,7 @@ SERVER_PORT: 8080
 - `required`: `true` or `false`
 - `default`: Fall back value if environment variable is not set.
 - `prefix`: Used for nested structures.
+- Text Replacement: `${EXAMPLE}` can be used to insert other environment variables.
 
 ## Supported data types
 
@@ -49,6 +53,9 @@ SERVER_PORT: 8080
 - int
 - float
 - bool
+- []string
+- []int
+- []float
 
 > [!NOTE]
 > This package takes heavy inspiration from [httputil](https://github.com/nickbryan/httputil) for handling reflection.
