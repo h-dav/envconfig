@@ -2,8 +2,9 @@ package main
 
 import (
 	"fmt"
-	"github.com/h-dav/envconfig/v2"
 	"log"
+
+	"github.com/h-dav/envconfig/v2"
 )
 
 type config struct {
@@ -13,6 +14,7 @@ type config struct {
 	Server      struct {
 		Port string `env:"PORT"`
 	} `prefix:"SERVER_"`
+	List []string `env:"LIST"`
 }
 
 func main() {

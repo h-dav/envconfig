@@ -24,10 +24,10 @@ help:
 	@echo "\nUsage: make ${YELLOW}<target>${RESET}\n\nThe following targets are available:\n";
 	@perl -e '$(HELP_FUN)' $(MAKEFILE_LIST)
 
-lint: ##@Test
+lint: ##@Lint
 	golangci-lint run $(args) ./...
 
-lint-fix: ##@Test
+lint-fix: ##@Lint
 	@make lint args="--fix"
 
 test: ##@Test
