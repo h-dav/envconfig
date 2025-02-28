@@ -50,7 +50,6 @@ type UnsupportedFieldTypeError struct {
 	FieldType any
 }
 
-// Error satisfies the error interface for UnsupportedFieldTypeError.
 func (e *UnsupportedFieldTypeError) Error() string {
 	return fmt.Sprintf("unsupported field type: %T", e.FieldType)
 }
@@ -64,14 +63,16 @@ func (e *InvalidConfigTypeError) Error() string {
 	return fmt.Sprintf("output must be a pointer to a struct, got %T", e.ProvidedType)
 }
 
+// RequiredFieldError is when a required field is not set and in the environment variables.
 type RequiredFieldError struct {
 	ParamName string
 }
 
 func (e *RequiredFieldError) Error() string {
-	return fmt.Sprintf("required field is not set in OS: %q", e.ParamName)
+	return fmt.Sprintf("required field is not set in environment variables: %q", e.ParamName)
 }
 
+// InvalidOptionConversionError is when an option is invalid for a field.
 type InvalidOptionConversionError struct {
 	ParamName string
 	Option    string
@@ -86,11 +87,11 @@ func (e *InvalidOptionConversionError) Unwrap() error {
 	return e.Err
 }
 
+// PrefixOptionError is when the prefix tag is invalid or not set on a nested struct.
 type PrefixOptionError struct {
 	ParamName any
 }
 
-// Error satisfies the error interface for UnsupportedFieldTypeError.
 func (e *PrefixOptionError) Error() string {
 	return fmt.Sprintf("prefix option is not set for nested struct field: %q", e.ParamName)
 }

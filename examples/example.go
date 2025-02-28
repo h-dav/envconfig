@@ -6,7 +6,7 @@ import (
 	"log"
 )
 
-type Config struct {
+type config struct {
 	Example     string `env:"KEY"`
 	SecondKey   int    `env:"SECOND_KEY" required:"true"`
 	DefaulteKey bool   `env:"DEFAULTED_KEY" default:"false"`
@@ -16,7 +16,7 @@ type Config struct {
 }
 
 func main() {
-	var cfg Config
+	var cfg config
 
 	if err := envconfig.Set("./config/example.env", &cfg); err != nil {
 		log.Fatal(err)

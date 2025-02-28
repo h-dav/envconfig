@@ -37,5 +37,18 @@ LOG_LEVEL: debug
 SERVER_PORT: 8080
 ```
 
+## Options
+
+- `required`: `true` or `false`
+- `default`: Fall back value if environment variable is not set.
+- `prefix`: Used for nested structures.
+
+## Supported data types
+
+- string
+- int
+- float
+- bool
+
 > [!NOTE]
 > This package takes heavy inspiration from [httputil](https://github.com/nickbryan/httputil) for handling reflection.

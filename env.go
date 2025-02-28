@@ -77,8 +77,8 @@ func populateConfig(config any) error {
 			continue
 		}
 
-		envValue := fetchEnvValue(envVariableName, field)
-		if envValue == "" {
+		environmentVariable := fetchEnvironmentVariable(envVariableName, field)
+		if environmentVariable == "" {
 			if err := checkRequiredOption(envVariableName, field); err != nil {
 				return err
 			}
@@ -86,25 +86,12 @@ func populateConfig(config any) error {
 			continue
 		}
 
-		if err := setFieldValue(configFieldValue, envValue, envVariableName); err != nil {
+		if err := setFieldValue(configFieldValue, environmentVariable, envVariableName); err != nil {
 			return err
 		}
 	}
 
 	return nil
-}
-
-func fetchEnvValue(envVariableName string, field reflect.StructField) string {
-	envValue := os.Getenv(envVariableName)
-
-	if envValue == "" {
-		defaultOptionValue, defaultOptionSet := field.Tag.Lookup("default")
-		if defaultOptionSet {
-			envValue = defaultOptionValue
-		}
-	}
-
-	return envValue
 }
 
 func handlePrefixOption(field reflect.StructField, configFieldValue reflect.Value) error {
@@ -126,6 +113,46 @@ func handlePrefixOption(field reflect.StructField, configFieldValue reflect.Valu
 	return nil
 }
 
+func populateNestedConfig(nestedConfig reflect.Value, prefix string) error {
+	for i := range nestedConfig.NumField() {
+		field := nestedConfig.Type().Field(i)
+		configFieldValue := nestedConfig.Field(i)
+
+		envVariableName := prefix + field.Tag.Get("env")
+		if envVariableName == "" {
+			continue
+		}
+
+		envValue := fetchEnvironmentVariable(envVariableName, field)
+		if envValue == "" {
+			if err := checkRequiredOption(envVariableName, field); err != nil {
+				return err
+			}
+
+			continue
+		}
+
+		if err := setFieldValue(configFieldValue, envValue, envVariableName); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func fetchEnvironmentVariable(envVariableName string, field reflect.StructField) string {
+	environmentVariable := os.Getenv(envVariableName)
+
+	if environmentVariable == "" {
+		defaultOptionValue, defaultOptionSet := field.Tag.Lookup("default")
+		if defaultOptionSet {
+			environmentVariable = defaultOptionValue
+		}
+	}
+
+	return environmentVariable
+}
+
 func checkRequiredOption(envVariableName string, field reflect.StructField) error {
 	requiredOptionValue, requiredOptionSet := field.Tag.Lookup("required")
 	if !requiredOptionSet {
@@ -140,33 +167,6 @@ func checkRequiredOption(envVariableName string, field reflect.StructField) erro
 			ParamName: envVariableName,
 			Option:    "required",
 			Err:       err,
-		}
-	}
-
-	return nil
-}
-
-func populateNestedConfig(nestedConfig reflect.Value, prefix string) error {
-	for i := range nestedConfig.NumField() {
-		field := nestedConfig.Type().Field(i)
-		configFieldValue := nestedConfig.Field(i)
-
-		envVariableName := prefix + field.Tag.Get("env")
-		if envVariableName == "" {
-			continue
-		}
-
-		envValue := fetchEnvValue(envVariableName, field)
-		if envValue == "" {
-			if err := checkRequiredOption(envVariableName, field); err != nil {
-				return err
-			}
-
-			continue
-		}
-
-		if err := setFieldValue(configFieldValue, envValue, envVariableName); err != nil {
-			return err
 		}
 	}
 
