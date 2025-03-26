@@ -65,8 +65,14 @@ func setEnvironmentVariables(filename string) error {
 
 		name, value, found := strings.Cut(line, ":")
 		if !found {
-			return &ParseError{Line: line}
+			name, value, found = strings.Cut(line, "=")
+			if !found {
+				return &ParseError{Line: line}
+			}
 		}
+
+		// Clean name of environment variable.
+		name = strings.TrimSpace(name)
 
 		// Clean a value of starting whitespace and comments.
 		value = strings.TrimSpace(value)
