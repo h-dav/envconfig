@@ -11,7 +11,7 @@ type FileTypeValidationError struct {
 
 // Error satisfies the error interface for FileTypeValidationError.
 func (e *FileTypeValidationError) Error() string {
-	return fmt.Sprintf("file is not a valid environment file: %q", e.Filename)
+	return fmt.Sprintf("file extension is not a valid environment file: %q", e.Filename)
 }
 
 // OpenFileError occurs when the .env config file fails to open.

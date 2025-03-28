@@ -193,3 +193,25 @@ func TestSetSuccessWithTextReplacement(t *testing.T) {
 		t.Errorf("got %+v, want %+v", config, want)
 	}
 }
+
+func TestSetSuccessWithJsonField(t *testing.T) {
+
+	type JSONField struct {
+		First string `json:"first"`
+	}
+
+	type Config struct {
+		JSONField JSONField `envjson:"JSON_FIELD"`
+	}
+
+	var config Config
+
+	var want Config
+	want.JSONField.First = "example"
+
+	envconfig.Set("./test_data/success_with_json_field.env", &config)
+
+	if config != want {
+		t.Errorf("got %+v, want %+v", config, want)
+	}
+}

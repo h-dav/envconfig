@@ -14,7 +14,10 @@ type config struct {
 	Server      struct {
 		Port string `env:"PORT"`
 	} `prefix:"SERVER_"`
-	List []string `env:"LIST"`
+	List   []string `env:"LIST"`
+	Jsoner struct {
+		Example string `json:"first"`
+	} `envjson:"JSONER"`
 }
 
 func main() {

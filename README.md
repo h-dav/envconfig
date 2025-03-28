@@ -5,7 +5,7 @@
 [![Test](https://github.com/h-dav/envconfig/actions/workflows/test.yml/badge.svg)](https://github.com/h-dav/envconfig/actions/workflows/test.yml)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/h-dav/envconfig/blob/main/LICENSE)
 
-A low dependency package for .env files.
+A low dependency package for handling environment variables.
 
 ## Install
 
@@ -36,8 +36,8 @@ err := envconfig.Set("./config/default.env", &cfg)
 The corresponding .env file for this example:
 
 ```env
-LOG_LEVEL: debug
-SERVER_PORT: 8080
+LOG_LEVEL=debug
+SERVER_PORT=8080
 ```
 
 ## Options
@@ -45,6 +45,7 @@ SERVER_PORT: 8080
 - `required`: `true` or `false`
 - `default`: Fall back value if environment variable is not set.
 - `prefix`: Used for nested structures.
+- `envjson`: Used for deserialising json into config.
 - Text Replacement: `${EXAMPLE}` can be used to insert other environment variables.
 
 ## Supported data types

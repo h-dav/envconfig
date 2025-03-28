@@ -3,8 +3,8 @@ Package envconfig is for parsing .env configuration files for your Go applicatio
 
 Create your .env file to set environment variables:
 
-	LOG_LEVEL: info
-	SERVER_PORT: 8080
+	LOG_LEVEL=info
+	SERVER_PORT=8080
 
 Populate your config structure:
 
