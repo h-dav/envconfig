@@ -154,8 +154,7 @@ func populateConfig(config any) error { //nolint:gocognit // Complexity is reaso
 		// Check if tagJSON option is set.
 		jsonOptionValue, jsonOptionSet := field.Tag.Lookup(tagJSON)
 		if jsonOptionSet {
-			err := handleJSONOption(configFieldValue, jsonOptionValue)
-			if err != nil {
+			if err := handleJSONOption(configFieldValue, jsonOptionValue); err != nil {
 				return fmt.Errorf("handle JSON option: %w", err)
 			}
 
@@ -194,17 +193,17 @@ func handlePrefixOption(
 	configFieldValue reflect.Value,
 	prefix string, // extendedPrefix is not zero value when a struct is deeply nested.
 ) error {
-	if field.Type.Kind() == reflect.Struct {
-		prefixOptionValue, prefixOptionSet := field.Tag.Lookup(tagPrefix)
-		if prefixOptionSet {
-			if err := populateNestedConfig(configFieldValue, prefix+prefixOptionValue); err != nil {
-				return fmt.Errorf("populate nested config struct: %w", err)
-			}
-		} else {
-			return &PrefixOptionError{
-				FieldName: field.Name,
-			}
-		}
+	if field.Type.Kind() != reflect.Struct {
+		return nil
+	}
+
+	prefixOptionValue, prefixOptionSet := field.Tag.Lookup(tagPrefix)
+	if !prefixOptionSet {
+		return &PrefixOptionError{FieldName: field.Name}
+	}
+
+	if err := populateNestedConfig(configFieldValue, prefix+prefixOptionValue); err != nil {
+		return fmt.Errorf("populate nested config struct: %w", err)
 	}
 
 	return nil
@@ -283,11 +282,13 @@ func populateNestedConfig(nestedConfig reflect.Value, prefix string) error {
 func fetchEnvironmentVariable(environmentVariableKey string, field reflect.StructField) string {
 	environmentVariable := os.Getenv(environmentVariableKey)
 
-	if environmentVariable == "" {
-		defaultOptionValue, defaultOptionSet := field.Tag.Lookup(tagDefault)
-		if defaultOptionSet {
-			environmentVariable = defaultOptionValue
-		}
+	if environmentVariable != "" {
+		return environmentVariable
+	}
+
+	defaultOptionValue, defaultOptionSet := field.Tag.Lookup(tagDefault)
+	if defaultOptionSet {
+		return defaultOptionValue
 	}
 
 	return environmentVariable
