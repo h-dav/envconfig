@@ -39,17 +39,27 @@ type entry struct {
 // textReplacementRegex is used to detect text replacement in environment variables.
 var textReplacementRegex = regexp.MustCompile(`\${[^}]+}`)
 
+type Parser interface {
+	Parse(filename string) error
+}
+
 // Set will parse the .env file and set the values in the environment, then populate the passed in struct
 // using ALL environment variables.
 func Set(filename string, config any) error {
 	if filename != "" {
-		if filepath.Ext(filename) != ".env" {
+		var parser Parser
+
+		switch filepath.Ext(filename) {
+		case ".env":
+			parser = EnvFileParser{}
+		default:
 			return &FileTypeValidationError{Filename: filename}
 		}
 
-		if err := setEnvironmentVariables(filename); err != nil {
+		if err := parser.Parse(filename); err != nil {
 			return fmt.Errorf("set environment variables: %w", err)
 		}
+
 	}
 
 	if err := populateConfig(config); err != nil {
@@ -59,8 +69,10 @@ func Set(filename string, config any) error {
 	return nil
 }
 
-// setEnvironmentVariables will parse the file and set the values in the environment.
-func setEnvironmentVariables(filename string) error {
+type EnvFileParser struct{}
+
+// Parse will parse the file and set the values in the environment.
+func (e EnvFileParser) Parse(filename string) error {
 	file, err := os.Open(filepath.Clean(filename))
 	if err != nil {
 		return &OpenFileError{Err: err}
