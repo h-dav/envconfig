@@ -34,9 +34,15 @@ type entry struct {
 
 // Set will parse the .env file and set the values in the environment, then populate the passed in struct
 // using all environment variables.
-func Set(filename string, config any) error {
-	if filename != "" {
-		if err := process(filename); err != nil {
+func Set(config any, opts ...Option) error {
+	s := &settings{}
+
+	for _, opt := range opts {
+		opt(s)
+	}
+
+	if s.Filename != "" {
+		if err := process(s.Filename); err != nil {
 			return fmt.Errorf("parse file: %w", err)
 		}
 	}

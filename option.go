@@ -8,6 +8,19 @@ import (
 	"strconv"
 )
 
+type settings struct {
+	Filename string
+}
+
+type Option func(*settings)
+
+// WithFilename option will cause the file provided to be used to set variables in the environment.
+func WithFilename(filename string) Option {
+	return func(s *settings) {
+		s.Filename = filename
+	}
+}
+
 // handlePrefixOption will handle nested structures that use the prefix option.
 func handlePrefixOption(
 	field reflect.StructField,

@@ -1,7 +1,7 @@
 # envconfig
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/h-dav/envconfig.svg)](https://pkg.go.dev/github.com/h-dav/envconfig)
-[![Go Report Card](https://goreportcard.com/badge/github.com/h-dav/envconfig/v2)](https://goreportcard.com/report/github.com/h-dav/envconfig/v2)
+[![Go Report Card](https://goreportcard.com/badge/github.com/h-dav/envconfig/v3)](https://goreportcard.com/report/github.com/h-dav/envconfig/v3)
 [![Test](https://github.com/h-dav/envconfig/actions/workflows/test.yml/badge.svg)](https://github.com/h-dav/envconfig/actions/workflows/test.yml)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/h-dav/envconfig/blob/main/LICENSE)
 
@@ -17,7 +17,7 @@ Package `envconfig` provides functionality to easily populate your config struct
 ## Installation
 
 ```bash
-go get github.com/h-dav/envconfig/v2
+go get github.com/h-dav/envconfig/v3
 ```
 
 ## Features
@@ -51,7 +51,7 @@ package main
 import (
     "time"
 
-    "github.com/h-dav/envconfig/v2"
+    "github.com/h-dav/envconfig/v3"
 )
 
 type Config struct {
@@ -70,7 +70,7 @@ type Config struct {
 func main() {
     var cfg Config
 
-    if err := envconfig.Set("./config/default.env", &cfg); err != nil {
+    if err := envconfig.Set(&cfg, WithFilename("./config/default.env")); err != nil {
         ...
     }
 }
