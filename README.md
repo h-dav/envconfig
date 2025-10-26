@@ -10,6 +10,7 @@ Package `envconfig` provides functionality to easily populate your config struct
 - [Installation](#installation)
 - [Features](#features)
     - [Options](#options)
+    - [Supported File Types](#supported-file-types)
     - [Supported Data Types](#supported-data-types)
 - [Usage](#usage)
 
@@ -28,6 +29,11 @@ go get github.com/h-dav/envconfig/v2
 - `prefix`: Used for nested structures.
 - `envjson`: Used for deserialising json into config.
 - Text Replacement: `${EXAMPLE}` can be used to insert other environment variables.
+
+### Supported File Types
+
+- .env
+- .toml
 
 ### Supported Data Types
 

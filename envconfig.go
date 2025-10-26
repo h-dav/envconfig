@@ -1,14 +1,10 @@
-// Package envconfig provides functionality to easily populate your config structure by using both environment variables, and a .env file (optional).
+// Package envconfig provides functionality to easily populate your config structure by using both environment variables, and a config file (optional).
 package envconfig
 
 import (
-	"bufio"
-	"encoding/json"
 	"fmt"
 	"os"
-	"path/filepath"
 	"reflect"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -36,110 +32,17 @@ type entry struct {
 	key, value string
 }
 
-// textReplacementRegex is used to detect text replacement in environment variables.
-var textReplacementRegex = regexp.MustCompile(`\${[^}]+}`)
-
-type Parser interface {
-	Parse(filename string) error
-}
-
 // Set will parse the .env file and set the values in the environment, then populate the passed in struct
-// using ALL environment variables.
+// using all environment variables.
 func Set(filename string, config any) error {
 	if filename != "" {
-		var parser Parser
-
-		switch filepath.Ext(filename) {
-		case ".env":
-			parser = EnvFileParser{}
-		default:
-			return &FileTypeValidationError{Filename: filename}
+		if err := process(filename); err != nil {
+			return fmt.Errorf("parse file: %w", err)
 		}
-
-		if err := parser.Parse(filename); err != nil {
-			return fmt.Errorf("set environment variables: %w", err)
-		}
-
 	}
 
 	if err := populateConfig(config); err != nil {
 		return fmt.Errorf("populate config struct: %w", err)
-	}
-
-	return nil
-}
-
-type EnvFileParser struct{}
-
-// Parse will parse the file and set the values in the environment.
-func (e EnvFileParser) Parse(filename string) error {
-	file, err := os.Open(filepath.Clean(filename))
-	if err != nil {
-		return &OpenFileError{Err: err}
-	}
-	defer file.Close() //nolint:errcheck // File closure.
-
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		line := scanner.Text()
-
-		// Handles empty and commented lines.
-		if line == "" || strings.HasPrefix(line, "#") {
-			continue
-		}
-
-		entry, err := parseEnvLine(line)
-		if err != nil {
-			return fmt.Errorf("parse environment variable line: %w", err)
-		}
-
-		if err = handleTextReplacement(&entry.value); err != nil {
-			return fmt.Errorf("handle text replacement: %w", err)
-		}
-
-		if err := os.Setenv(entry.key, entry.value); err != nil {
-			return &SetEnvironmentVariableError{Err: err}
-		}
-	}
-
-	if err := scanner.Err(); err != nil {
-		return &FileReadError{Filename: filename, Err: err}
-	}
-
-	return nil
-}
-
-// parseEnvLine parses an individual .env line, and detect comments.
-func parseEnvLine(line string) (entry, error) {
-	key, value, found := strings.Cut(line, "=")
-	if !found {
-		return entry{}, &ParseError{Line: line}
-	}
-
-	// Clean environment variable key.
-	key = strings.TrimSpace(key)
-
-	// Clean a value of starting whitespace and comments.
-	value = strings.TrimSpace(value)
-	value, _, _ = strings.Cut(value, " #")
-
-	return entry{key: key, value: value}, nil
-}
-
-// handleTextReplacement will check a .env file entry value for text replacements, and fulfill the text replacement.
-func handleTextReplacement(value *string) error {
-	match := textReplacementRegex.FindStringSubmatch(*value)
-
-	for _, m := range match {
-		environmentValue := strings.TrimPrefix(m, "${")
-		environmentValue = strings.TrimSuffix(environmentValue, "}")
-
-		replacementValue := os.Getenv(environmentValue)
-		if replacementValue == "" {
-			return &ReplacementError{VariableName: environmentValue}
-		}
-
-		*value = strings.ReplaceAll(*value, m, replacementValue)
 	}
 
 	return nil
@@ -158,12 +61,11 @@ func populateConfig(config any) error { //nolint:gocognit // Complexity is reaso
 		field := configValue.Type().Field(i)
 		configFieldValue := configValue.Field(i)
 
-		// Ensure the field is exported and the field is not already populated.
+		// Ignore fields that are not exported, or fields have a non-zero value.
 		if !configFieldValue.CanSet() || !configFieldValue.IsZero() {
 			continue
 		}
 
-		// Check if tagJSON option is set.
 		jsonOptionValue, jsonOptionSet := field.Tag.Lookup(tagJSON)
 		if jsonOptionSet {
 			if err := handleJSONOption(configFieldValue, jsonOptionValue); err != nil {
@@ -194,51 +96,6 @@ func populateConfig(config any) error { //nolint:gocognit // Complexity is reaso
 		if err := setFieldValue(configFieldValue, entry{environmentVariableKey, environmentVariable}); err != nil {
 			return fmt.Errorf("set field value: %w", err)
 		}
-	}
-
-	return nil
-}
-
-// handlePrefixOption will handle nested structures that use the prefix option.
-func handlePrefixOption(
-	field reflect.StructField,
-	configFieldValue reflect.Value,
-	prefix string, // extendedPrefix is not zero value when a struct is deeply nested.
-) error {
-	if field.Type.Kind() != reflect.Struct {
-		return nil
-	}
-
-	prefixOptionValue, prefixOptionSet := field.Tag.Lookup(tagPrefix)
-	if !prefixOptionSet {
-		return &PrefixOptionError{FieldName: field.Name}
-	}
-
-	if err := populateNestedConfig(configFieldValue, prefix+prefixOptionValue); err != nil {
-		return fmt.Errorf("populate nested config struct: %w", err)
-	}
-
-	return nil
-}
-
-// handleJSONOption will handle populating JSON structs via environment variables that are JSON.
-func handleJSONOption(
-	configFieldValue reflect.Value,
-	environmentKey string, // environmentKey is not zero value when a struct is deeply nested.
-) error {
-	if err := populateJSON(configFieldValue, environmentKey); err != nil {
-		return fmt.Errorf("populate JSON config struct: %w", err)
-	}
-
-	return nil
-}
-
-// populateJSON will populate the JSON struct.
-func populateJSON(configFieldValue reflect.Value, environmentVariableKey string) error {
-	environmentValue := os.Getenv(environmentVariableKey)
-
-	if err := json.Unmarshal([]byte(environmentValue), configFieldValue.Addr().Interface()); err != nil {
-		return fmt.Errorf("unmarshal json: %w", err)
 	}
 
 	return nil
@@ -304,29 +161,6 @@ func fetchEnvironmentVariable(environmentVariableKey string, field reflect.Struc
 	}
 
 	return environmentVariable
-}
-
-// checkRequiredOption checks if a field is required and returns an error if so.
-//
-// This function is only called when an environment variable is not set for a field.
-func checkRequiredOption(environmentVariableKey string, field reflect.StructField) error {
-	requiredOptionValue, requiredOptionSet := field.Tag.Lookup(tagRequired)
-	if !requiredOptionSet {
-		return nil
-	}
-
-	requiredOption, err := strconv.ParseBool(requiredOptionValue)
-	if requiredOption {
-		return &RequiredFieldError{FieldName: environmentVariableKey}
-	} else if err != nil {
-		return &InvalidOptionConversionError{
-			FieldName: environmentVariableKey,
-			Option:    tagRequired,
-			Err:       err,
-		}
-	}
-
-	return nil
 }
 
 // setFieldValue determines the type of a config field, and branch out to the correct
