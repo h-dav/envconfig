@@ -11,11 +11,10 @@ import (
 
 const (
 	envExtension   = ".env"
-	tomlExtensions = ".toml"
 )
 
 type parser interface {
-	// parse should ingest a file and set the values as enrivonment variables.
+	// parse should ingest a file and set the values as environment variables.
 	parse(filename string) error
 }
 
@@ -37,14 +36,11 @@ func identifyParser(filename string) (parser, error) {
 	switch filepath.Ext(filename) {
 	case envExtension:
 		parser = envFileParser{}
-	case tomlExtensions:
-		parser = tomlFileParser{}
 	default:
 		return nil, &FileTypeValidationError{Filename: filename}
 	}
 
 	return parser, nil
-
 }
 
 type envFileParser struct{}
@@ -101,18 +97,6 @@ func (e envFileParser) parseEnvLine(line string) (entry, error) {
 	value, _, _ = strings.Cut(value, " #")
 
 	return entry{key: key, value: value}, nil
-}
-
-type tomlFileParser struct{}
-
-func (t tomlFileParser) parse(filename string) error {
-	file, err := os.Open(filepath.Clean(filename))
-	if err != nil {
-		return &OpenFileError{Err: err}
-	}
-	defer file.Close() //nolint:errcheck // File closure.
-
-	return nil
 }
 
 // textReplacementRegex is used to detect text replacement in environment variables.

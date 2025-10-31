@@ -1,6 +1,7 @@
 package envconfig_test
 
 import (
+	"os"
 	"slices"
 	"testing"
 	"time"
@@ -31,9 +32,13 @@ type SuccessWithSettingTimeDuration struct {
 	Duration time.Duration `env:"DURATION"`
 }
 
-// TestSetWithSimpleConfigStructures is test cases for simple use cases,
+type SuccessWithPrefixOption struct {
+	Duration time.Duration `env:"DURATION"`
+}
+
+// TestSetWithFilename is test cases for simple use cases,
 // such as flat config structures and fundamental fields, like required, and default.
-func TestSetWithSimpleConfigStructures(t *testing.T) {
+func TestSetWithFilename(t *testing.T) {
 	type testCase struct {
 		filename string
 		want     any
@@ -147,6 +152,49 @@ func TestSetWithSimpleConfigStructures(t *testing.T) {
 				var config SuccessWithSettingTimeDuration
 
 				if err := envconfig.Set(&config, envconfig.WithFilename(tc.filename)); err != nil {
+					t.Fail()
+				}
+
+				if config != tc.want {
+					t.Errorf("got %+v, want %+v", config, tc.want)
+				}
+			},
+		},
+	}
+
+	for tn, tc := range testCases {
+		t.Run(tn,
+			func(t *testing.T) {
+				t.Parallel()
+
+				tc.assert(t, tc)
+			},
+		)
+	}
+}
+
+func TestSetWithPrefix(t *testing.T) {
+	type testCase struct {
+		want     any
+		assert   func(*testing.T, testCase)
+	}
+
+	testCases := map[string]testCase{
+		"success with prefix option": {
+			want: SuccessWithPrefixOption{
+				Duration: 10000000000,
+			},
+			assert: func(t *testing.T, tc testCase) {
+				t.Helper()
+
+				os.Setenv("PREFIX_DURATION", "10s")
+
+				var config SuccessWithPrefixOption
+
+				if err := envconfig.Set(
+					&config, 
+					envconfig.WithPrefix("PREFIX_"),
+				); err != nil {
 					t.Fail()
 				}
 

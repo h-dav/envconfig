@@ -24,16 +24,23 @@ go get github.com/h-dav/envconfig/v3
 
 ### Options
 
+#### Tags
+
 - `required`: `true` or `false`
 - `default`: Default value if environment variable is not set.
 - `prefix`: Used for nested structures.
-- `envjson`: Used for deserialising json into config.
+- `envjson`: Used for deserialising JSON into config.
+
+#### Other
+
+- WithFilename("config.env")
+- WithPrefix("MY_APP_"): Prefix for every single field in your config struct when fetching from environment variables.
+
 - Text Replacement: `${EXAMPLE}` can be used to insert other environment variables.
 
 ### Supported File Types
 
 - .env
-- .toml
 
 ### Supported Data Types
 
@@ -86,8 +93,6 @@ SLICE_INT_FIELD=1, 2, 3
 DURATION=30s
 ```
 
-> [!NOTE]
-> See [test cases](./env_test.go) for more usage examples.
 
 > [!NOTE]
 > This package takes heavy inspiration from [httputil](https://github.com/nickbryan/httputil) for handling reflection.

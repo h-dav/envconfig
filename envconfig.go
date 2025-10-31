@@ -10,24 +10,6 @@ import (
 	"time"
 )
 
-const (
-	// tagEnv is used for fetching the environment variable by name.
-	tagEnv = "env"
-
-	// tagDefault is used to set a fallback value for a config field if the environment variable is not set.
-	tagDefault = "default"
-
-	// tagRequired is used for config struct fields that are required. If the environment variable is not set, an
-	// error will be returned.
-	tagRequired = "required"
-
-	// tagJSON is used for environment variables that are JSON.
-	tagJSON = "envjson"
-
-	// tagPrefix is used for nested structs inside your config struct.
-	tagPrefix = "prefix"
-)
-
 type entry struct {
 	key, value string
 }
@@ -41,13 +23,13 @@ func Set(config any, opts ...Option) error {
 		opt(s)
 	}
 
-	if s.Filename != "" {
-		if err := process(s.Filename); err != nil {
+	if s.filename != "" {
+		if err := process(s.filename); err != nil {
 			return fmt.Errorf("parse file: %w", err)
 		}
 	}
 
-	if err := populateConfig(config); err != nil {
+	if err := s.populateConfig(config); err != nil {
 		return fmt.Errorf("populate config struct: %w", err)
 	}
 
@@ -55,9 +37,9 @@ func Set(config any, opts ...Option) error {
 }
 
 // populateConfig populated the config struct using all environment variables.
-func populateConfig(config any) error { //nolint:gocognit // Complexity is reasonable.
+func (s settings) populateConfig(config any) error { //nolint:gocognit // Complexity is reasonable.
 	configStruct := reflect.ValueOf(config)
-	if configStruct.Kind() != reflect.Ptr || configStruct.Elem().Kind() != reflect.Struct {
+	if configStruct.Kind() != reflect.Pointer || configStruct.Elem().Kind() != reflect.Struct {
 		return &InvalidConfigTypeError{ProvidedType: config}
 	}
 
@@ -74,14 +56,14 @@ func populateConfig(config any) error { //nolint:gocognit // Complexity is reaso
 
 		jsonOptionValue, jsonOptionSet := field.Tag.Lookup(tagJSON)
 		if jsonOptionSet {
-			if err := handleJSONOption(configFieldValue, jsonOptionValue); err != nil {
+			if err := handleJSONTag(configFieldValue, jsonOptionValue); err != nil {
 				return fmt.Errorf("handle JSON option: %w", err)
 			}
 
 			continue
 		}
 
-		if err := handlePrefixOption(field, configFieldValue, ""); err != nil {
+		if err := handlePrefixTag(field, configFieldValue, ""); err != nil {
 			return fmt.Errorf("handle prefix option: %w", err)
 		}
 
@@ -90,9 +72,9 @@ func populateConfig(config any) error { //nolint:gocognit // Complexity is reaso
 			continue
 		}
 
-		environmentVariable := fetchEnvironmentVariable(environmentVariableKey, field)
+		environmentVariable := fetchEnvironmentVariable(s.prefix+environmentVariableKey, field)
 		if environmentVariable == "" {
-			if err := checkRequiredOption(environmentVariableKey, field); err != nil {
+			if err := checkRequiredTag(environmentVariableKey, field); err != nil {
 				return fmt.Errorf("check required option: %w", err)
 			}
 
@@ -119,7 +101,7 @@ func populateNestedConfig(nestedConfig reflect.Value, prefix string) error {
 
 		jsonOptionValue, jsonOptionSet := field.Tag.Lookup(tagJSON)
 		if jsonOptionSet {
-			err := handleJSONOption(configFieldValue, prefix+jsonOptionValue)
+			err := handleJSONTag(configFieldValue, prefix+jsonOptionValue)
 			if err != nil {
 				return fmt.Errorf("handle JSON option: %w", err)
 			}
@@ -127,7 +109,7 @@ func populateNestedConfig(nestedConfig reflect.Value, prefix string) error {
 			continue
 		}
 
-		if err := handlePrefixOption(field, configFieldValue, prefix); err != nil {
+		if err := handlePrefixTag(field, configFieldValue, prefix); err != nil {
 			return fmt.Errorf("handle prefix option: %w", err)
 		}
 
@@ -138,7 +120,7 @@ func populateNestedConfig(nestedConfig reflect.Value, prefix string) error {
 
 		environmentValue := fetchEnvironmentVariable(environmentVariableKey, field)
 		if environmentValue == "" {
-			if err := checkRequiredOption(environmentVariableKey, field); err != nil {
+			if err := checkRequiredTag(environmentVariableKey, field); err != nil {
 				return fmt.Errorf("check required option: %w", err)
 			}
 

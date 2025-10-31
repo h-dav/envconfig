@@ -19,10 +19,6 @@ func Test_identifyParser(t *testing.T) {
 			filename: "example.env",
 			want:     envFileParser{},
 		},
-		"expect toml parser for env file": {
-			filename: "example.toml",
-			want:     tomlFileParser{},
-		},
 		"expect error due to invalid file extension": {
 			filename: "example.invalid",
 			wantErr: &FileTypeValidationError{
@@ -41,14 +37,6 @@ func Test_identifyParser(t *testing.T) {
 				if !cmp.Equal(tc.wantErr, err) {
 					t.Errorf("wantErr: %#v, got: %#v", tc.wantErr, err)
 				}
-
-				// if !cmp.Equal(reflect.TypeOf(tc.want), reflect.TypeOf(got)) {
-				// 	t.Errorf(
-				// 		"want: %q, got: %q",
-				// 		reflect.TypeOf(tc.wantErr),
-				// 		reflect.TypeOf(got),
-				// 	)
-				// }
 
 				if reflect.TypeOf(tc.want) != reflect.TypeOf(got) {
 					t.Errorf(
