@@ -3,6 +3,7 @@ package envconfig
 type settings struct {
 	filename string
 	prefix   string
+	source map[string]string
 }
 
 type option func(*settings)

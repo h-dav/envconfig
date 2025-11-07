@@ -144,7 +144,6 @@ func TestSetWithFilename(t *testing.T) {
 		t.Run(tn,
 			func(t *testing.T) {
 				t.Parallel()
-
 				tc.assert(t, tc)
 			},
 		)
