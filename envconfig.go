@@ -37,14 +37,14 @@ func Set(config any, opts ...option) error {
 		return fmt.Errorf("process environment variables: %w", err)
 	}
 
-	if err := s.populateConfig(config); err != nil {
-		return fmt.Errorf("populate config: %w", err)
+	if err := s.populateStruct(config); err != nil {
+		return fmt.Errorf("populate config struct: %w", err)
 	}
 
 	return nil
 }
 
-func (s settings) populateConfig(config any) error {
+func (s settings) populateStruct(config any) error {
 	configStruct := reflect.ValueOf(config)
 	if configStruct.Kind() != reflect.Pointer || configStruct.Elem().Kind() != reflect.Struct {
 		return &InvalidConfigTypeError{ProvidedType: config}
@@ -70,40 +70,31 @@ func (s settings) populateConfig(config any) error {
 			continue
 		}
 
-		if err := handlePrefixTag(field, configFieldValue, "", s.source); err != nil {
+		if err := s.handlePrefixTag(field, configFieldValue, ""); err != nil {
 			return fmt.Errorf("handle prefix tag: %w", err)
 		}
 
-		environmentVariableKey := field.Tag.Get(tagEnv)
-		if environmentVariableKey == "" {
+		key := field.Tag.Get(tagEnv)
+		if key == "" {
 			continue
 		}
 
-		value := s.source[environmentVariableKey]
+		value := s.source[key]
 		if value == "" {
-			if err := checkRequiredTag(environmentVariableKey, field); err != nil {
+			if err := checkRequiredTag(key, field); err != nil {
 				return fmt.Errorf("check required tag: %w", err)
 			}
 
 			value = field.Tag.Get(tagDefault)
 		}
 
-		match := textReplacementRegex.FindStringSubmatch(value)
-
-		for _, m := range match {
-			environmentValue := strings.TrimPrefix(m, "${")
-			environmentValue = strings.TrimSuffix(environmentValue, "}")
-
-			replacementValue := s.source[environmentValue]
-			if replacementValue == "" {
-				return &ReplacementError{VariableName: environmentValue}
-			}
-
-			value = strings.ReplaceAll(value, m, replacementValue)
+		value, err := s.resolveReplacement(value)
+		if err != nil {
+			return fmt.Errorf("resolve replacement: %w", err)
 		}
 
 		if err := setFieldValue(
-			configFieldValue, entry{environmentVariableKey, value}); err != nil {
+			configFieldValue, entry{key, value}); err != nil {
 			return fmt.Errorf("set field value: %w", err)
 		}
 	}
@@ -111,8 +102,26 @@ func (s settings) populateConfig(config any) error {
 	return nil
 }
 
+func (s settings) resolveReplacement(value string) (string, error) {
+	match := textReplacementRegex.FindStringSubmatch(value)
+
+	for _, m := range match {
+		environmentValue := strings.TrimPrefix(m, "${")
+		environmentValue = strings.TrimSuffix(environmentValue, "}")
+
+		replacementValue := s.source[environmentValue]
+		if replacementValue == "" {
+			return "", &ReplacementError{VariableName: environmentValue}
+		}
+
+		value = strings.ReplaceAll(value, m, replacementValue)
+	}
+
+	return value, nil
+}
+
 // populateNestedConfig populates a nested struct.
-func populateNestedConfig(nestedConfig reflect.Value, prefix string, source map[string]string) error {
+func (s settings)populateNestedConfig(nestedConfig reflect.Value, prefix string) error {
 	for i := range nestedConfig.NumField() {
 		field := nestedConfig.Type().Field(i)
 		configFieldValue := nestedConfig.Field(i)
@@ -123,7 +132,7 @@ func populateNestedConfig(nestedConfig reflect.Value, prefix string, source map[
 
 		jsonOptionValue, jsonOptionSet := field.Tag.Lookup(tagJSON)
 		if jsonOptionSet {
-			err := json.Unmarshal([]byte(source[jsonOptionValue]), &configFieldValue)
+			err := json.Unmarshal([]byte(s.source[jsonOptionValue]), &configFieldValue)
 			if err != nil {
 				return fmt.Errorf("handle JSON tag: %w", err)
 			}
@@ -131,7 +140,7 @@ func populateNestedConfig(nestedConfig reflect.Value, prefix string, source map[
 			continue
 		}
 
-		if err := handlePrefixTag(field, configFieldValue, prefix, source); err != nil {
+		if err := s.handlePrefixTag(field, configFieldValue, prefix); err != nil {
 			return fmt.Errorf("handle prefix tag: %w", err)
 		}
 
@@ -140,7 +149,7 @@ func populateNestedConfig(nestedConfig reflect.Value, prefix string, source map[
 			continue
 		}
 		if err := setFieldValue(
-			configFieldValue, entry{environmentVariableKey, source[environmentVariableKey]}); err != nil {
+			configFieldValue, entry{environmentVariableKey, s.source[environmentVariableKey]}); err != nil {
 			return fmt.Errorf("set field value: %w", err)
 		}
 	}

@@ -47,11 +47,10 @@ func checkRequiredTag(environmentVariableKey string, field reflect.StructField) 
 	return nil
 }
 
-func handlePrefixTag(
+func (s settings)handlePrefixTag(
 	field reflect.StructField,
 	configFieldValue reflect.Value,
 	prefix string,
-	source map[string]string,
 ) error {
 	if field.Type.Kind() != reflect.Struct {
 		return nil
@@ -62,7 +61,7 @@ func handlePrefixTag(
 		return &PrefixOptionError{FieldName: field.Name}
 	}
 
-	if err := populateNestedConfig(configFieldValue, prefix+prefixOptionValue, source); err != nil {
+	if err := s.populateNestedConfig(configFieldValue, prefix+prefixOptionValue); err != nil {
 		return fmt.Errorf("populate nested config struct: %w", err)
 	}
 
