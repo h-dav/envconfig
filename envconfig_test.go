@@ -125,25 +125,25 @@ func TestSet(t *testing.T) {
 				}
 			},
 		},
-		// "success with text replacement": {
-		// 	filename: "./test_data/success_with_text_replacement.env",
-		// 	want: SuccessWithTextReplacement{
-		// 		ReplaceField: "exampleField",
-		// 	},
-		// 	assert: func(t *testing.T, tc testCase) {
-		// 		t.Helper()
-		//
-		// 		var config SuccessWithTextReplacement
-		//
-		// 		if err := envconfig.Set(&config); err != nil {
-		// 			t.Fail()
-		// 		}
-		//
-		// 		if config != tc.want {
-		// 			t.Errorf("got %+v, want %+v", config, tc.want)
-		// 		}
-		// 	},
-		// },
+		"success with text replacement": {
+			filename: "./test_data/success_with_text_replacement.env",
+			want: SuccessWithTextReplacement{
+				ReplaceField: "exampleField",
+			},
+			assert: func(t *testing.T, tc testCase) {
+				t.Helper()
+
+				var config SuccessWithTextReplacement
+
+				if err := envconfig.Set(&config); err != nil {
+					t.Fail()
+				}
+
+				if config != tc.want {
+					t.Errorf("got %+v, want %+v", config, tc.want)
+				}
+			},
+		},
 		"success with setting time.Duration": {
 			filename: "./test_data/success_with_setting_time_Duration.env",
 			want: SuccessWithSettingTimeDuration{

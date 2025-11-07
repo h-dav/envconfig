@@ -32,7 +32,7 @@ func Test_identifyParser(t *testing.T) {
 			func(t *testing.T) {
 				t.Parallel()
 
-				got, err := identifyParser(tc.filename)
+				got, err := identifyFileParser(tc.filename)
 
 				if !cmp.Equal(tc.wantErr, err) {
 					t.Errorf("wantErr: %#v, got: %#v", tc.wantErr, err)
@@ -48,5 +48,4 @@ func Test_identifyParser(t *testing.T) {
 			},
 		)
 	}
-
 }
