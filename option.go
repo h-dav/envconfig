@@ -5,17 +5,17 @@ type settings struct {
 	prefix   string
 }
 
-type Option func(*settings)
+type option func(*settings)
 
 // WithFilename option will cause the file provided to be used to set variables in the environment.
-func WithFilename(filename string) Option {
+func WithFilename(filename string) option {
 	return func(s *settings) {
 		s.filename = filename
 	}
 }
 
 // WithPrefix option will add the prefix to before every set and retrieval to and from env.
-func WithPrefix(prefix string) Option {
+func WithPrefix(prefix string) option {
 	return func(s *settings) {
 		s.prefix = prefix
 	}
