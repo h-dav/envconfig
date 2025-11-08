@@ -13,12 +13,11 @@ const (
 )
 
 type parser interface {
-	// parse should populate a config struct.
 	parse() (map[string]string, error)
 }
 
-func (s *settings) processFilename() error {
-	parser, err := identifyFileParser(s.filename)
+func (s *settings) processFilepath() error {
+	parser, err := identifyFileParser(s.filepath)
 	if err != nil {
 		return fmt.Errorf("identify file parser: %w", err)
 	}
@@ -33,17 +32,18 @@ func (s *settings) processFilename() error {
 	return nil
 }
 
-func identifyFileParser(filename string) (parser, error) {
+// identifyFileParser determines the parser to use based on the filepath received.
+func identifyFileParser(f string) (parser, error) {
 	var parser parser
 
-	switch filepath.Ext(filename) {
+	switch filepath.Ext(f) {
 	case envExtension:
 		parser = envFileParser{
 			source:   map[string]string{},
-			filename: filename,
+			filepath: f,
 		}
 	default:
-		return nil, &FileTypeValidationError{Filename: filename}
+		return nil, &FileTypeValidationError{Filepath: f}
 	}
 
 	return parser, nil
@@ -51,11 +51,11 @@ func identifyFileParser(filename string) (parser, error) {
 
 type envFileParser struct {
 	source   map[string]string
-	filename string
+	filepath string
 }
 
 func (e envFileParser) parse() (map[string]string, error) {
-	file, err := os.Open(filepath.Clean(e.filename))
+	file, err := os.Open(filepath.Clean(e.filepath))
 	if err != nil {
 		return make(map[string]string), &OpenFileError{Err: err}
 	}
@@ -79,7 +79,7 @@ func (e envFileParser) parse() (map[string]string, error) {
 	}
 
 	if err := scanner.Err(); err != nil {
-		return make(map[string]string), &FileReadError{Filename: e.filename, Err: err}
+		return make(map[string]string), &FileReadError{Filepath: e.filepath, Err: err}
 	}
 
 	return e.source, nil

@@ -6,45 +6,18 @@ import (
 	"github.com/h-dav/envconfig/v3"
 )
 
-// type SuccessWithOneField struct {
-// 	Example string `env:"KEY"`
-// }
-// type SuccessWithOneIntField struct {
-// 	Example int `env:"KEY"`
-// }
-//
-// type SuccessWithDefaultValueAndEmptyEnvFile struct {
-// 	Example string `env:"DEFAULT_VALUE" default:"value2"`
-// }
-//
-// type SuccessWithRequiredField struct {
-// 	Example string `env:"REQUIRED_VALUE" required:"true"`
-// }
-//
-// type SuccessWithTextReplacement struct {
-// 	ReplaceField string `env:"REPLACE_FIELD"`
-// }
-//
-// type SuccessWithSettingTimeDuration struct {
-// 	Duration time.Duration `env:"DURATION"`
-// }
-//
-// type SuccessWithPrefixOption struct {
-// 	Duration time.Duration `env:"DURATION"`
-// }
-
-// TestSetWithFilename is test cases for simple use cases,
+// TestSetWithFilepath is test cases for simple use cases,
 // such as flat config structures and fundamental fields, like required, and default.
-func TestSetWithFilename(t *testing.T) {
+func TestSetWithFilepath(t *testing.T) {
 	type testCase struct {
-		filename string
+		filepath string
 		want     any
 		assert   func(*testing.T, testCase)
 	}
 
 	testCases := map[string]testCase{
 		"success with one field": {
-			filename: "./test_data/success_with_one_field.env",
+			filepath: "./test_data/success_with_one_field.env",
 			want: SuccessWithOneField{
 				Example: "value1",
 			},
@@ -53,7 +26,7 @@ func TestSetWithFilename(t *testing.T) {
 
 				var config SuccessWithOneField
 
-				if err := envconfig.Set(&config, envconfig.WithFilename(tc.filename)); err != nil {
+				if err := envconfig.Set(&config, envconfig.WithFilepath(tc.filepath)); err != nil {
 					t.Fail()
 				}
 
@@ -63,7 +36,7 @@ func TestSetWithFilename(t *testing.T) {
 			},
 		},
 		"success with one int field": {
-			filename: "./test_data/success_with_one_int_field.env",
+			filepath: "./test_data/success_with_one_int_field.env",
 			want: SuccessWithOneIntField{
 				Example: 10,
 			},
@@ -72,7 +45,7 @@ func TestSetWithFilename(t *testing.T) {
 
 				var config SuccessWithOneIntField
 
-				if err := envconfig.Set(&config, envconfig.WithFilename(tc.filename)); err != nil {
+				if err := envconfig.Set(&config, envconfig.WithFilepath(tc.filepath)); err != nil {
 					t.Fail()
 				}
 
@@ -82,7 +55,7 @@ func TestSetWithFilename(t *testing.T) {
 			},
 		},
 		"success with default value and empty env file": {
-			filename: "./test_data/success_with_one_default_value_and_empty_env_file.env",
+			filepath: "./test_data/success_with_one_default_value_and_empty_env_file.env",
 			want: SuccessWithDefaultValueAndEmptyEnvFile{
 				Example: "value2",
 			},
@@ -91,7 +64,7 @@ func TestSetWithFilename(t *testing.T) {
 
 				var config SuccessWithDefaultValueAndEmptyEnvFile
 
-				if err := envconfig.Set(&config, envconfig.WithFilename(tc.filename)); err != nil {
+				if err := envconfig.Set(&config, envconfig.WithFilepath(tc.filepath)); err != nil {
 					t.Fail()
 				}
 
@@ -101,7 +74,7 @@ func TestSetWithFilename(t *testing.T) {
 			},
 		},
 		"success with text replacement": {
-			filename: "./test_data/success_with_text_replacement.env",
+			filepath: "./test_data/success_with_text_replacement.env",
 			want: SuccessWithTextReplacement{
 				ReplaceField: "exampleField",
 			},
@@ -110,7 +83,7 @@ func TestSetWithFilename(t *testing.T) {
 
 				var config SuccessWithTextReplacement
 
-				if err := envconfig.Set(&config, envconfig.WithFilename(tc.filename)); err != nil {
+				if err := envconfig.Set(&config, envconfig.WithFilepath(tc.filepath)); err != nil {
 					t.Fail()
 				}
 
@@ -120,7 +93,7 @@ func TestSetWithFilename(t *testing.T) {
 			},
 		},
 		"success with setting time.Duration": {
-			filename: "./test_data/success_with_setting_time_Duration.env",
+			filepath: "./test_data/success_with_setting_time_Duration.env",
 			want: SuccessWithSettingTimeDuration{
 				Duration: 10000000000,
 			},
@@ -129,7 +102,7 @@ func TestSetWithFilename(t *testing.T) {
 
 				var config SuccessWithSettingTimeDuration
 
-				if err := envconfig.Set(&config, envconfig.WithFilename(tc.filename)); err != nil {
+				if err := envconfig.Set(&config, envconfig.WithFilepath(tc.filepath)); err != nil {
 					t.Fail()
 				}
 

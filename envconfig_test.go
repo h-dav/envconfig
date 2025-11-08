@@ -43,14 +43,14 @@ type SuccessWithPrefixOption struct {
 // such as flat config structures and fundamental fields, like required, and default.
 func TestSet(t *testing.T) {
 	type testCase struct {
-		filename string
+		filepath string
 		want     any
 		assert   func(*testing.T, testCase)
 	}
 
 	testCases := map[string]testCase{
 		"success with one field": {
-			filename: "./test_data/success_with_one_field.env",
+			filepath: "./test_data/success_with_one_field.env",
 			want: SuccessWithOneField{
 				Example: "value1",
 			},
@@ -69,7 +69,7 @@ func TestSet(t *testing.T) {
 			},
 		},
 		"success with one int field": {
-			filename: "./test_data/success_with_one_int_field.env",
+			filepath: "./test_data/success_with_one_int_field.env",
 			want: SuccessWithOneIntField{
 				Example: 10,
 			},
@@ -88,7 +88,7 @@ func TestSet(t *testing.T) {
 			},
 		},
 		"success with default value and empty env file": {
-			filename: "./test_data/success_with_one_default_value_and_empty_env_file.env",
+			filepath: "./test_data/success_with_one_default_value_and_empty_env_file.env",
 			want: SuccessWithDefaultValueAndEmptyEnvFile{
 				Example: "value2",
 			},
@@ -107,7 +107,7 @@ func TestSet(t *testing.T) {
 			},
 		},
 		"success with required field": {
-			filename: "./test_data/success_with_required_field.env",
+			filepath: "./test_data/success_with_required_field.env",
 			want: SuccessWithRequiredField{
 				Example: "value3",
 			},
@@ -126,7 +126,7 @@ func TestSet(t *testing.T) {
 			},
 		},
 		"success with text replacement": {
-			filename: "./test_data/success_with_text_replacement.env",
+			filepath: "./test_data/success_with_text_replacement.env",
 			want: SuccessWithTextReplacement{
 				ReplaceField: "exampleField",
 			},
@@ -145,7 +145,7 @@ func TestSet(t *testing.T) {
 			},
 		},
 		"success with setting time.Duration": {
-			filename: "./test_data/success_with_setting_time_Duration.env",
+			filepath: "./test_data/success_with_setting_time_Duration.env",
 			want: SuccessWithSettingTimeDuration{
 				Duration: 10000000000,
 			},
@@ -170,7 +170,7 @@ func TestSet(t *testing.T) {
 			func(t *testing.T) {
 				t.Parallel()
 
-				loadFileIntoEnvironmentVariables(tc.filename)
+				loadFileIntoEnvironmentVariables(tc.filepath)
 
 				tc.assert(t, tc)
 			},
@@ -178,8 +178,8 @@ func TestSet(t *testing.T) {
 	}
 }
 
-func loadFileIntoEnvironmentVariables(filename string) {
-	file, err := os.Open(filename)
+func loadFileIntoEnvironmentVariables(filepath string) {
+	file, err := os.Open(filepath)
 	if err != nil {
 		log.Fatal(err)
 	}

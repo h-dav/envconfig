@@ -1,17 +1,28 @@
 package envconfig
 
 type settings struct {
-	filename string
-	prefix   string
-	source map[string]string
+	filepath        string
+	activeProfile   string
+	prefix          string
+	source          map[string]string
+	temporaryPrefix string // temporary prefix is only used we are populating nested structs
 }
 
 type option func(*settings)
 
-// WithFilename option will cause the file provided to be used to set variables in the environment.
-func WithFilename(filename string) option {
+// WithFilepath option will cause the file provided to be used to set variables in the environment.
+func WithFilepath(filepath string) option {
 	return func(s *settings) {
-		s.filename = filename
+		s.filepath = filepath
+	}
+}
+
+func WithActiveProfile(activeProfile string) option {
+	return func(s *settings) {
+		if activeProfile == "" {
+			activeProfile = "default"
+		}
+		s.activeProfile = activeProfile
 	}
 }
 

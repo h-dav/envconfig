@@ -4,6 +4,7 @@ package envconfig
 import (
 	"encoding/json"
 	"fmt"
+	"path/filepath"
 	"reflect"
 	"regexp"
 	"strings"
@@ -16,8 +17,7 @@ type entry struct {
 // textReplacementRegex is used to detect text replacement in environment variables.
 var textReplacementRegex = regexp.MustCompile(`\${[^}]+}`)
 
-// Set will parse the .env file and set the values in the environment, then populate the passed in struct
-// using all environment variables.
+// Set will parse multiple sources for config values, and use these values to populate the passed in config struct.
 func Set(config any, opts ...option) error {
 	s := &settings{
 		source: map[string]string{},
@@ -27,9 +27,23 @@ func Set(config any, opts ...option) error {
 		opt(s)
 	}
 
-	if s.filename != "" {
-		if err := s.processFilename(); err != nil {
-			return fmt.Errorf("process file: %w", err)
+	if s.activeProfile != "" {
+		if s.filepath == "" {
+			return fmt.Errorf("assign active profile: %w", &IncompatibleOptionsError{
+				FirstOption:  "WithActiveProfile()",
+				SecondOption: "WithFilepath()",
+				Reason:       "directory in filepath option must be provided when using active profile",
+			})
+		}
+
+		dir, _ := filepath.Split(s.filepath)
+
+		s.filepath = dir + s.activeProfile + envExtension
+	}
+
+	if s.filepath != "" {
+		if err := s.processFilepath(); err != nil {
+			return fmt.Errorf("process filepath: %w", err)
 		}
 	}
 
@@ -44,6 +58,7 @@ func Set(config any, opts ...option) error {
 	return nil
 }
 
+// populateStruct uses the items in settings.source to populate the passed in config struct.
 func (s settings) populateStruct(config any) error {
 	configStruct := reflect.ValueOf(config)
 	if configStruct.Kind() != reflect.Pointer || configStruct.Elem().Kind() != reflect.Struct {
@@ -102,6 +117,8 @@ func (s settings) populateStruct(config any) error {
 	return nil
 }
 
+// resolveReplacement checks if a string has the pattern of ${...}, and if so, uses values in settings.source to
+// replace the pattern, and returns the newly created string.
 func (s settings) resolveReplacement(value string) (string, error) {
 	match := textReplacementRegex.FindStringSubmatch(value)
 
@@ -121,7 +138,7 @@ func (s settings) resolveReplacement(value string) (string, error) {
 }
 
 // populateNestedConfig populates a nested struct.
-func (s settings)populateNestedConfig(nestedConfig reflect.Value, prefix string) error {
+func (s settings) populateNestedConfig(nestedConfig reflect.Value, prefix string) error {
 	for i := range nestedConfig.NumField() {
 		field := nestedConfig.Type().Field(i)
 		configFieldValue := nestedConfig.Field(i)

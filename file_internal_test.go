@@ -9,20 +9,20 @@ import (
 
 func Test_identifyParser(t *testing.T) {
 	type testCase struct {
-		filename string
+		filepath string
 		want     parser
 		wantErr  error
 	}
 
 	testCases := map[string]testCase{
 		"expect env parser for env file": {
-			filename: "example.env",
+			filepath: "example.env",
 			want:     envFileParser{},
 		},
 		"expect error due to invalid file extension": {
-			filename: "example.invalid",
+			filepath: "example.invalid",
 			wantErr: &FileTypeValidationError{
-				Filename: "example.invalid",
+				Filepath: "example.invalid",
 			},
 		},
 	}
@@ -32,7 +32,7 @@ func Test_identifyParser(t *testing.T) {
 			func(t *testing.T) {
 				t.Parallel()
 
-				got, err := identifyFileParser(tc.filename)
+				got, err := identifyFileParser(tc.filepath)
 
 				if !cmp.Equal(tc.wantErr, err) {
 					t.Errorf("wantErr: %#v, got: %#v", tc.wantErr, err)
