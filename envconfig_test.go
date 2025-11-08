@@ -1,11 +1,15 @@
 package envconfig_test
 
 import (
+	"bufio"
+	"log"
+	"os"
 	"slices"
+	"strings"
 	"testing"
 	"time"
 
-	"github.com/h-dav/envconfig/v2"
+	"github.com/h-dav/envconfig/v3"
 )
 
 type SuccessWithOneField struct {
@@ -31,18 +35,22 @@ type SuccessWithSettingTimeDuration struct {
 	Duration time.Duration `env:"DURATION"`
 }
 
-// TestSetWithSimpleConfigStructures is test cases for simple use cases,
+type SuccessWithPrefixOption struct {
+	Duration time.Duration `env:"DURATION"`
+}
+
+// TestSet is test cases for simple use cases,
 // such as flat config structures and fundamental fields, like required, and default.
-func TestSetWithSimpleConfigStructures(t *testing.T) {
+func TestSet(t *testing.T) {
 	type testCase struct {
-		filename string
+		filepath string
 		want     any
 		assert   func(*testing.T, testCase)
 	}
 
 	testCases := map[string]testCase{
 		"success with one field": {
-			filename: "./test_data/success_with_one_field.env",
+			filepath: "./test_data/success_with_one_field.env",
 			want: SuccessWithOneField{
 				Example: "value1",
 			},
@@ -51,7 +59,7 @@ func TestSetWithSimpleConfigStructures(t *testing.T) {
 
 				var config SuccessWithOneField
 
-				if err := envconfig.Set(tc.filename, &config); err != nil {
+				if err := envconfig.Set(&config); err != nil {
 					t.Fail()
 				}
 
@@ -61,7 +69,7 @@ func TestSetWithSimpleConfigStructures(t *testing.T) {
 			},
 		},
 		"success with one int field": {
-			filename: "./test_data/success_with_one_int_field.env",
+			filepath: "./test_data/success_with_one_int_field.env",
 			want: SuccessWithOneIntField{
 				Example: 10,
 			},
@@ -70,7 +78,7 @@ func TestSetWithSimpleConfigStructures(t *testing.T) {
 
 				var config SuccessWithOneIntField
 
-				if err := envconfig.Set(tc.filename, &config); err != nil {
+				if err := envconfig.Set(&config); err != nil {
 					t.Fail()
 				}
 
@@ -80,7 +88,7 @@ func TestSetWithSimpleConfigStructures(t *testing.T) {
 			},
 		},
 		"success with default value and empty env file": {
-			filename: "./test_data/success_with_one_default_value_and_empty_env_file.env",
+			filepath: "./test_data/success_with_one_default_value_and_empty_env_file.env",
 			want: SuccessWithDefaultValueAndEmptyEnvFile{
 				Example: "value2",
 			},
@@ -89,7 +97,7 @@ func TestSetWithSimpleConfigStructures(t *testing.T) {
 
 				var config SuccessWithDefaultValueAndEmptyEnvFile
 
-				if err := envconfig.Set(tc.filename, &config); err != nil {
+				if err := envconfig.Set(&config); err != nil {
 					t.Fail()
 				}
 
@@ -99,7 +107,7 @@ func TestSetWithSimpleConfigStructures(t *testing.T) {
 			},
 		},
 		"success with required field": {
-			filename: "./test_data/success_with_required_field.env",
+			filepath: "./test_data/success_with_required_field.env",
 			want: SuccessWithRequiredField{
 				Example: "value3",
 			},
@@ -108,7 +116,7 @@ func TestSetWithSimpleConfigStructures(t *testing.T) {
 
 				var config SuccessWithRequiredField
 
-				if err := envconfig.Set(tc.filename, &config); err != nil {
+				if err := envconfig.Set(&config); err != nil {
 					t.Fail()
 				}
 
@@ -118,7 +126,7 @@ func TestSetWithSimpleConfigStructures(t *testing.T) {
 			},
 		},
 		"success with text replacement": {
-			filename: "./test_data/success_with_text_replacement.env",
+			filepath: "./test_data/success_with_text_replacement.env",
 			want: SuccessWithTextReplacement{
 				ReplaceField: "exampleField",
 			},
@@ -127,7 +135,7 @@ func TestSetWithSimpleConfigStructures(t *testing.T) {
 
 				var config SuccessWithTextReplacement
 
-				if err := envconfig.Set(tc.filename, &config); err != nil {
+				if err := envconfig.Set(&config); err != nil {
 					t.Fail()
 				}
 
@@ -137,7 +145,7 @@ func TestSetWithSimpleConfigStructures(t *testing.T) {
 			},
 		},
 		"success with setting time.Duration": {
-			filename: "./test_data/success_with_setting_time_Duration.env",
+			filepath: "./test_data/success_with_setting_time_Duration.env",
 			want: SuccessWithSettingTimeDuration{
 				Duration: 10000000000,
 			},
@@ -146,7 +154,79 @@ func TestSetWithSimpleConfigStructures(t *testing.T) {
 
 				var config SuccessWithSettingTimeDuration
 
-				if err := envconfig.Set(tc.filename, &config); err != nil {
+				if err := envconfig.Set(&config); err != nil {
+					t.Fail()
+				}
+
+				if config != tc.want {
+					t.Errorf("got %+v, want %+v", config, tc.want)
+				}
+			},
+		},
+	}
+
+	for tn, tc := range testCases {
+		t.Run(tn,
+			func(t *testing.T) {
+				t.Parallel()
+
+				loadFileIntoEnvironmentVariables(tc.filepath)
+
+				tc.assert(t, tc)
+			},
+		)
+	}
+}
+
+func loadFileIntoEnvironmentVariables(filepath string) {
+	file, err := os.Open(filepath)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		key, value, _ := strings.Cut(scanner.Text(), "=")
+
+		// Clean environment variable key.
+		key = strings.TrimSpace(key)
+
+		// Clean a value of starting whitespace and comments.
+		value = strings.TrimSpace(value)
+		value, _, _ = strings.Cut(value, " #")
+		os.Setenv(key, value)
+	}
+
+	if err := scanner.Err(); err != nil {
+		log.Fatal(err)
+	}
+
+	return
+}
+
+func TestSetWithPrefix(t *testing.T) {
+	type testCase struct {
+		want   any
+		assert func(*testing.T, testCase)
+	}
+
+	testCases := map[string]testCase{
+		"success with prefix option": {
+			want: SuccessWithPrefixOption{
+				Duration: 10000000000,
+			},
+			assert: func(t *testing.T, tc testCase) {
+				t.Helper()
+
+				os.Setenv("PREFIX_DURATION", "10s")
+
+				var config SuccessWithPrefixOption
+
+				if err := envconfig.Set(
+					&config,
+					envconfig.WithPrefix("PREFIX_"),
+				); err != nil {
 					t.Fail()
 				}
 
@@ -180,7 +260,9 @@ func TestSetSuccessWithSliceStringField(t *testing.T) {
 	var want Config
 	want.SliceStringField = []string{"first", "second", "third"}
 
-	envconfig.Set("./test_data/success_with_slice_string_field.env", &config)
+	loadFileIntoEnvironmentVariables("./test_data/success_with_slice_string_field.env")
+
+	envconfig.Set(&config)
 
 	if !slices.Equal(config.SliceStringField, want.SliceStringField) {
 		t.Errorf("got %+v, want %+v", config, want)
@@ -197,7 +279,9 @@ func TestSetSuccessWithSliceIntField(t *testing.T) {
 	var want Config
 	want.SliceIntField = []int{1, 2, 3}
 
-	envconfig.Set("./test_data/success_with_slice_int_field.env", &config)
+	loadFileIntoEnvironmentVariables("./test_data/success_with_slice_int_field.env")
+
+	envconfig.Set(&config)
 
 	if !slices.Equal(config.SliceIntField, want.SliceIntField) {
 		t.Errorf("got %+v, want %+v", config, want)
@@ -214,7 +298,9 @@ func TestSetSuccessWithSliceFloatField(t *testing.T) {
 	var want Config
 	want.SliceFloatField = []float64{1.2, 2.3, 3.4}
 
-	envconfig.Set("./test_data/success_with_slice_float_field.env", &config)
+	loadFileIntoEnvironmentVariables("./test_data/success_with_slice_float_field.env")
+
+	envconfig.Set(&config)
 
 	if !slices.Equal(config.SliceFloatField, want.SliceFloatField) {
 		t.Errorf("got %+v, want %+v", config, want)
@@ -235,7 +321,9 @@ func TestSetSuccessWithNestedStruct(t *testing.T) {
 	var want Config
 	want.Server.Port = "8080"
 
-	envconfig.Set("./test_data/success_with_nested_struct.env", &config)
+	loadFileIntoEnvironmentVariables("./test_data/success_with_nested_struct.env")
+
+	envconfig.Set(&config)
 
 	if config != want {
 		t.Errorf("got %+v, want %+v", config, want)
@@ -256,7 +344,9 @@ func TestSetSuccessWithDeeplyNestedStruct(t *testing.T) {
 	var want Config
 	want.Server.Port.Value = "1234"
 
-	envconfig.Set("./test_data/success_with_deeply_nested_struct.env", &config)
+	loadFileIntoEnvironmentVariables("./test_data/success_with_deeply_nested_struct.env")
+
+	envconfig.Set(&config)
 
 	if config != want {
 		t.Errorf("got %+v, want %+v", config, want)
@@ -281,7 +371,9 @@ func TestSetSuccessWithThriceDeeplyNestedStruct(t *testing.T) {
 	want.Server.Database.Tables.First = "example_table"
 	want.Server.Database.Timezome = "uk/london"
 
-	envconfig.Set("./test_data/success_with_thrice_deeply_nested_struct.env", &config)
+	loadFileIntoEnvironmentVariables("./test_data/success_with_thrice_deeply_nested_struct.env")
+
+	envconfig.Set(&config)
 
 	if config != want {
 		t.Errorf("got %+v, want %+v", config, want)
@@ -301,8 +393,9 @@ func TestSetSuccessWithJsonField(t *testing.T) {
 
 	var want Config
 	want.JSONField.First = "example"
+	loadFileIntoEnvironmentVariables("./test_data/success_with_json_field.env")
 
-	envconfig.Set("./test_data/success_with_json_field.env", &config)
+	envconfig.Set(&config)
 
 	if config != want {
 		t.Errorf("got %+v, want %+v", config, want)

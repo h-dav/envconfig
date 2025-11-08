@@ -7,12 +7,12 @@ import (
 
 // FileTypeValidationError occurs when the .env config file fails to open.
 type FileTypeValidationError struct {
-	Filename string
+	Filepath string
 }
 
 // Error satisfies the error interface for FileTypeValidationError.
 func (e *FileTypeValidationError) Error() string {
-	return fmt.Sprintf("file extension is not a valid environment file: %q", e.Filename)
+	return fmt.Sprintf("file extension is not a valid environment file: %q", e.Filepath)
 }
 
 // OpenFileError occurs when the .env config file fails to open.
@@ -137,14 +137,31 @@ func (e *ParseError) Error() string {
 
 // FileReadError occurs when an error occurs when scanning the .env file.
 type FileReadError struct {
-	Filename string
+	Filepath string
 	Err      error
 }
 
 // Error satisfies the error interface for FileReadError.
 func (e *FileReadError) Error() string {
-	return fmt.Sprintf("reading %v: %v", e.Filename, e.Err.Error())
+	return fmt.Sprintf("reading %v: %v", e.Filepath, e.Err.Error())
 }
 
 // Unwrap allows FileReadError to be used with errors.Is and errors.As.
 func (e *FileReadError) Unwrap() error { return e.Err }
+
+// IncompatibleOptionsError occurs when two options are incompatible with each other, or the usage is invalid.
+type IncompatibleOptionsError struct {
+	FirstOption  string
+	SecondOption string
+	Reason       string
+}
+
+// Error satisfies the error interface for FileReadError.
+func (e *IncompatibleOptionsError) Error() string {
+	return fmt.Sprintf(
+		"incompatible option usage of %v and %v: %v",
+		e.FirstOption,
+		e.SecondOption,
+		e.Reason,
+	)
+}

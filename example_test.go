@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/h-dav/envconfig/v2"
+	"github.com/h-dav/envconfig/v3"
 )
 
 func ExampleSet() {
@@ -16,7 +16,7 @@ func ExampleSet() {
 
 	var cfg Config
 
-	envconfig.Set("", &cfg)
+	envconfig.Set(&cfg)
 
 	fmt.Println(cfg.Value)
 	// Output:
