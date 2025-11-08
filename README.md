@@ -1,18 +1,13 @@
 # envconfig
 
-[![Go Reference](https://pkg.go.dev/badge/github.com/h-dav/envconfig.svg)](https://pkg.go.dev/github.com/h-dav/envconfig)
-[![Go Report Card](https://goreportcard.com/badge/github.com/h-dav/envconfig/v3)](https://goreportcard.com/report/github.com/h-dav/envconfig/v3)
-[![Test](https://github.com/h-dav/envconfig/actions/workflows/test.yml/badge.svg)](https://github.com/h-dav/envconfig/actions/workflows/test.yml)
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/h-dav/envconfig/blob/main/LICENSE)
-
-Package `envconfig` provides functionality to easily populate your config structure by using both environment variables, and a .env file (optional).
+Package `envconfig` will populate your config struct based on sources such as environment variables, files, etc.
 
 - [Installation](#installation)
 - [Features](#features)
     - [Options](#options)
-    - [Supported File Types](#supported-file-types)
-    - [Supported Data Types](#supported-data-types)
-- [Usage](#usage)
+    - [Struct Tags](#tags)
+    - [Other](#other)
+- [Merging Values](#merging-values)
 
 ## Installation
 
@@ -24,75 +19,28 @@ go get github.com/h-dav/envconfig/v3
 
 ### Options
 
-#### Tags
+- `WithFilepath("config/file.env")`
+> [!NOTE]
+> Currently only .env files are supported.
+- `WithActiveProfile("dev_env")`
+- `WithPrefix("MY_APP")`
 
+### Struct Tags
+
+- `env`: Used to determine the key of the value to use when populating config fields.
 - `required`: `true` or `false`
 - `default`: Default value if environment variable is not set.
 - `prefix`: Used for nested structures.
 - `envjson`: Used for deserialising JSON into config.
 
-#### Other
+### Other
 
-- WithFilename("config.env")
-- WithPrefix("MY_APP_"): Prefix for every single field in your config struct when fetching from environment variables.
+- Text Replacement: `${EXAMPLE}` can be used to insert other discovered values.
 
-- Text Replacement: `${EXAMPLE}` can be used to insert other environment variables.
+## Merging Values
 
-### Supported File Types
-
-- .env
-
-### Supported Data Types
-
-- string (slice compatible)
-- int (slice compatible)
-- float (slice compatible)
-- bool
-- time.Duration
-
-## Usage
-
-```go
-package main
-
-import (
-    "time"
-
-    "github.com/h-dav/envconfig/v3"
-)
-
-type Config struct {
-    // Fields must be exported to be populated.
-    LogLevel string `env:"LOG_LEVEL" default:"info"`
-    Server struct {
-        Port string `env:"PORT" required:"true"`
-    } `prefix:"SERVER_"`
-    JSONField struct {
-        First string `json:"first"`
-    } `envjson:"JSON_FIELD"`
-    SliceIntField []int `env:"SLICE_INT_FIELD"`
-    DurationField time.Duration `env:"DURATION"`
-}
-
-func main() {
-    var cfg Config
-
-    if err := envconfig.Set(&cfg, WithFilename("./config/default.env")); err != nil {
-        ...
-    }
-}
-```
-
-Corresponding .env file:
-
-```env
-LOG_LEVEL=debug
-SERVER_PORT=8080
-JSON_FIELD={"first": "example"}
-SLICE_INT_FIELD=1, 2, 3
-DURATION=30s
-```
-
-
-> [!NOTE]
-> This package takes heavy inspiration from [httputil](https://github.com/nickbryan/httputil) for handling reflection.
+> [!IMPORTANT]
+> When merging values, `envconfig` uses the following precedence:
+> 1. Flags
+> 2. Environment Variables
+> 3. Config File (provided via `WithFilepath()`)

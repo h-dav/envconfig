@@ -51,6 +51,10 @@ func Set(config any, opts ...option) error {
 		return fmt.Errorf("process environment variables: %w", err)
 	}
 
+	if err := s.processFlags(); err != nil {
+		return fmt.Errorf("process flags: %w", err)
+	}
+
 	if err := s.populateStruct(config); err != nil {
 		return fmt.Errorf("populate config struct: %w", err)
 	}

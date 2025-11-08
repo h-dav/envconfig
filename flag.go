@@ -4,7 +4,7 @@ import (
 	"flag"
 )
 
-func (s *settings) processFlags(_ any) error {
+func (s *settings) processFlags() error {
 	flag.Parse()
 
 	flag.Visit(func(f *flag.Flag) {
