@@ -7,6 +7,7 @@ Package `envconfig` will populate your config struct based on sources such as en
     - [Options](#options)
     - [Struct Tags](#tags)
     - [Other](#other)
+    - [Examples](#examples)
 - [Merging Values](#merging-values)
 
 ## Installation
@@ -19,11 +20,10 @@ go get github.com/h-dav/envconfig/v3
 
 ### Options
 
-- `WithFilepath("config/file.env")`
-> [!NOTE]
-> Currently only .env files are supported.
-- `WithActiveProfile("dev_env")`
-- `WithPrefix("MY_APP")`
+| Option                            | Description                                           |
+|-----------------------------------|-------------------------------------------------------|
+| `WithFilepath("config/file.env")` | Use file to populate config struct.                   |
+| `WithActiveProfile("dev_env")`    | Provide the profile to select a specific config file. |
 
 ### Struct Tags
 
@@ -44,3 +44,76 @@ go get github.com/h-dav/envconfig/v3
 > 1. Flags
 > 2. Environment Variables
 > 3. Config File (provided via `WithFilepath()`)
+
+## Examples
+
+### Basic
+
+```go
+func main() {
+    type Config struct {
+        Development bool `env:"DEVELOPMENT" default:"true"`
+    }
+
+    var cfg Config
+
+    if err := envconfig.Set(&cfg); err != nil {
+        panic(err)
+    }
+}
+```
+
+### Config File
+
+```go
+func main() {
+    type Config struct {
+        Service string `env:"SERVICE"`
+    }
+
+    var cfg Config
+
+    if err := envconfig.Set(&cfg, WithFilepath("internal/config/config.env")); err != nil {
+        panic(err)
+    }
+}
+```
+
+### Profile
+
+```go
+func main() {
+    type Config struct {
+        Service string `env:"SERVICE"`
+    }
+
+    var cfg Config
+
+    if err := envconfig.Set(
+        &cfg,
+        WithActiveProfile(os.Getenv("ACTIVE_PROFILE")),
+        WithFilepath("internal/config/"), // Will use file `internal/config/development.env`.
+    ); err != nil {
+        panic(err)
+    }
+}
+```
+
+### Nested Structs
+
+```go
+func main() {
+    type Config struct {
+        Service struct {
+            Name string `env:"NAME"`
+            Version string `env:"VERSION"`
+        } `prefix:"SERVICE_"`
+    }
+
+    var cfg Config
+
+    if err := envconfig.Set(&cfg); err != nil {
+        panic(err)
+    }
+}
+```

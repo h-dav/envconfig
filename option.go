@@ -26,10 +26,9 @@ func WithActiveProfile(activeProfile string) option {
 	}
 }
 
-// WithPrefix option will add the prefix to before every set and retrieval to and from env.
+// WithPrefix option will add the prefix to before every set and retrieval from env.
 func WithPrefix(prefix string) option {
 	return func(s *settings) {
 		s.prefix = prefix
 	}
 }
-
