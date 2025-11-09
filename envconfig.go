@@ -21,6 +21,7 @@ var textReplacementRegex = regexp.MustCompile(`\${[^}]+}`)
 func Set(config any, opts ...option) error {
 	s := &settings{
 		source: map[string]string{},
+		sources: []source{FlagSource{}, EnvironmentVariableSource{}},
 	}
 
 	for _, opt := range opts {
@@ -41,18 +42,15 @@ func Set(config any, opts ...option) error {
 		s.filepath = dir + s.activeProfile + envExtension
 	}
 
-	if s.filepath != "" {
-		if err := s.processFilepath(); err != nil {
-			return fmt.Errorf("process filepath: %w", err)
+	for _, source := range s.sources {
+		values, err := source.Load()
+		if err != nil {
+			return fmt.Errorf("load from source: %w", err)
 		}
-	}
 
-	if err := s.processEnvironmentVariables(); err != nil {
-		return fmt.Errorf("process environment variables: %w", err)
-	}
-
-	if err := s.processFlags(); err != nil {
-		return fmt.Errorf("process flags: %w", err)
+		for key, value := range values {
+			s.source[key] = value
+		}
 	}
 
 	if err := s.populateStruct(config); err != nil {

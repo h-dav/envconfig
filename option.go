@@ -6,6 +6,7 @@ type settings struct {
 	prefix          string
 	source          map[string]string
 	temporaryPrefix string // temporary prefix is only used we are populating nested structs
+	sources []source
 }
 
 type option func(*settings)
@@ -14,6 +15,9 @@ type option func(*settings)
 func WithFilepath(filepath string) option {
 	return func(s *settings) {
 		s.filepath = filepath
+		s.sources = append(s.sources, FileSource{
+			filepath: filepath,
+		})
 	}
 }
 
