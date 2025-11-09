@@ -17,18 +17,18 @@ type entry struct {
 // textReplacementRegex is used to detect text replacement in environment variables.
 var textReplacementRegex = regexp.MustCompile(`\${[^}]+}`)
 
-
 // Set will parse multiple sources for config values, and use these values to populate the passed in config struct.
 func Set(config any, opts ...option) error {
 	s := &settings{
 		source:   map[string]string{},
-		sources:  []source{FlagSource{}, EnvironmentVariableSource{}},
 		decoders: defaultDecoders,
 	}
 
 	for _, opt := range opts {
 		opt(s)
 	}
+
+	s.sources = append(s.sources, EnvironmentVariableSource{}, FlagSource{})
 
 	if s.activeProfile != "" {
 		if s.filepath == "" {

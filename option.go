@@ -12,8 +12,6 @@ type settings struct {
 	decoders map[reflect.Type]DecoderFunc
 }
 
-type DecoderFunc func(key, value string) (reflect.Value, error)
-
 type option func(*settings)
 
 // WithFilepath option will cause the file provided to be used to set variables in the environment.

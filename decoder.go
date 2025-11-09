@@ -7,6 +7,8 @@ import (
 	"time"
 )
 
+type DecoderFunc func(key, value string) (reflect.Value, error)
+
 var defaultDecoders = map[reflect.Type]DecoderFunc{
 	reflect.TypeOf(time.Duration(0)): func(key, value string) (reflect.Value, error) {
 		durationValue, err := time.ParseDuration(value)
