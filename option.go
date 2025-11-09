@@ -1,5 +1,7 @@
 package envconfig
 
+import "reflect"
+
 type settings struct {
 	filepath        string
 	activeProfile   string
@@ -7,7 +9,10 @@ type settings struct {
 	source          map[string]string
 	temporaryPrefix string // temporary prefix is only used we are populating nested structs
 	sources []source
+	decoders map[reflect.Type]DecoderFunc
 }
+
+type DecoderFunc func(key, value string) (reflect.Value, error)
 
 type option func(*settings)
 
@@ -34,5 +39,16 @@ func WithActiveProfile(activeProfile string) option {
 func WithPrefix(prefix string) option {
 	return func(s *settings) {
 		s.prefix = prefix
+	}
+}
+
+func WithDecoders(decoders map[reflect.Type]DecoderFunc) option {
+	return func(s *settings) {
+		if s.decoders == nil {
+			s.decoders = make(map[reflect.Type]DecoderFunc)
+		}
+		for typ, dec := range decoders {
+			s.decoders[typ] = dec
+		}
 	}
 }

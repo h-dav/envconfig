@@ -17,11 +17,13 @@ type entry struct {
 // textReplacementRegex is used to detect text replacement in environment variables.
 var textReplacementRegex = regexp.MustCompile(`\${[^}]+}`)
 
+
 // Set will parse multiple sources for config values, and use these values to populate the passed in config struct.
 func Set(config any, opts ...option) error {
 	s := &settings{
-		source: map[string]string{},
-		sources: []source{FlagSource{}, EnvironmentVariableSource{}},
+		source:   map[string]string{},
+		sources:  []source{FlagSource{}, EnvironmentVariableSource{}},
+		decoders: defaultDecoders,
 	}
 
 	for _, opt := range opts {
@@ -110,7 +112,7 @@ func (s settings) populateStruct(config any) error {
 			return fmt.Errorf("resolve replacement: %w", err)
 		}
 
-		if err := setFieldValue(
+		if err := s.setFieldValue(
 			configFieldValue, entry{key, value}); err != nil {
 			return fmt.Errorf("set field value: %w", err)
 		}
@@ -167,7 +169,7 @@ func (s settings) populateNestedConfig(nestedConfig reflect.Value, prefix string
 		if environmentVariableKey == prefix { // Ensure tag is set.
 			continue
 		}
-		if err := setFieldValue(
+		if err := s.setFieldValue(
 			configFieldValue, entry{environmentVariableKey, s.source[environmentVariableKey]}); err != nil {
 			return fmt.Errorf("set field value: %w", err)
 		}

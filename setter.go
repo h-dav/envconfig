@@ -7,86 +7,94 @@ import (
 	"time"
 )
 
+var defaultDecoders = map[reflect.Type]DecoderFunc{
+	reflect.TypeOf(time.Duration(0)): func(key, value string) (reflect.Value, error) {
+		durationValue, err := time.ParseDuration(value)
+		if err != nil {
+			return reflect.Value{}, &FieldConversionError{
+				FieldName:  key,
+				TargetType: "time.Duration",
+				Err:        err,
+			}
+		}
+
+		return reflect.ValueOf(durationValue), nil
+	},
+	reflect.TypeOf(int(0)): func(key, value string) (reflect.Value, error) {
+		intValue, err := strconv.Atoi(value)
+		if err != nil {
+			return reflect.Value{}, &FieldConversionError{
+				FieldName:  key,
+				TargetType: "int",
+				Err:        err,
+			}
+		}
+
+		return reflect.ValueOf(intValue), nil
+	},
+	reflect.TypeOf(true): func(key, value string) (reflect.Value, error) {
+		boolValue, err := strconv.ParseBool(value)
+		if err != nil {
+			return reflect.Value{}, &FieldConversionError{
+				FieldName:  key,
+				TargetType: "bool",
+				Err:        err,
+			}
+		}
+
+		return reflect.ValueOf(boolValue), nil
+	},
+	reflect.TypeOf(float64(0)): func(key, value string) (reflect.Value, error) {
+		floatValue, err := strconv.ParseFloat(value, 64)
+		if err != nil {
+			return reflect.Value{}, &FieldConversionError{
+				FieldName:  key,
+				TargetType: "float",
+				Err:        err,
+			}
+		}
+
+		return reflect.ValueOf(floatValue), nil
+	},
+}
+
+type Setter interface {
+	Set(value string) error
+}
+
 // setFieldValue determines the type of a config field, and branch out to the correct
 // function to populate that data type.
-func setFieldValue(
+func (s settings) setFieldValue(
 	configFieldValue reflect.Value,
 	entry entry,
 ) error {
+	fieldAddr := configFieldValue.Addr()
+
+	if setter, ok := fieldAddr.Interface().(Setter); ok {
+		return setter.Set(entry.value)
+	}
+
+	if dec, ok := s.decoders[configFieldValue.Type()]; ok {
+		decodedValue, err := dec(entry.key, entry.value)
+		if err != nil {
+			return err
+		}
+		configFieldValue.Set(decodedValue)
+		return nil
+	}
+
 	switch configFieldValue.Interface().(type) {
 	case string:
 		configFieldValue.SetString(entry.value)
-	case int:
-		return setIntFieldValue(configFieldValue, entry)
-	case bool:
-		return setBoolFieldValue(configFieldValue, entry)
-	case float64:
-		return setFloatFieldValue(configFieldValue, entry)
 	case []string:
 		return setStringSliceFieldValue(configFieldValue, entry.value)
 	case []int:
 		return setIntSliceFieldValue(configFieldValue, entry)
 	case []float64:
 		return setFloatSliceFieldValue(configFieldValue, entry)
-	case time.Duration:
-		return setDurationFieldValue(configFieldValue, entry)
 	default:
 		return &UnsupportedFieldTypeError{FieldType: configFieldValue.Interface()}
 	}
-
-	return nil
-}
-
-func setIntFieldValue(
-	configFieldValue reflect.Value,
-	entry entry,
-) error {
-	intValue, err := strconv.Atoi(entry.value)
-	if err != nil {
-		return &FieldConversionError{
-			FieldName:  entry.key,
-			TargetType: "int",
-			Err:        err,
-		}
-	}
-
-	configFieldValue.SetInt(int64(intValue))
-
-	return nil
-}
-
-func setBoolFieldValue(
-	configFieldValue reflect.Value,
-	entry entry,
-) error {
-	boolValue, err := strconv.ParseBool(entry.value)
-	if err != nil {
-		return &FieldConversionError{
-			FieldName:  entry.key,
-			TargetType: "bool",
-			Err:        err,
-		}
-	}
-
-	configFieldValue.SetBool(boolValue)
-
-	return nil
-}
-
-func setFloatFieldValue(
-	configFieldValue reflect.Value,
-	entry entry,
-) error {
-	floatValue, err := strconv.ParseFloat(entry.value, 64)
-	if err != nil {
-		return &FieldConversionError{
-			FieldName:  entry.key,
-			TargetType: "float",
-			Err:        err,
-		}
-	}
-
-	configFieldValue.SetFloat(floatValue)
 
 	return nil
 }
@@ -155,24 +163,6 @@ func setFloatSliceFieldValue(
 	}
 
 	configFieldValue.Set(slice)
-
-	return nil
-}
-
-func setDurationFieldValue(
-	configFieldValue reflect.Value,
-	entry entry,
-) error {
-	durationValue, err := time.ParseDuration(entry.value)
-	if err != nil {
-		return &FieldConversionError{
-			FieldName:  entry.key,
-			TargetType: "time.Duration",
-			Err:        err,
-		}
-	}
-
-	configFieldValue.Set(reflect.ValueOf(durationValue))
 
 	return nil
 }
