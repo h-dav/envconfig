@@ -2,8 +2,8 @@
 package envconfig
 
 import (
-	"encoding/json"
 	"fmt"
+	"maps"
 	"path/filepath"
 	"reflect"
 	"regexp"
@@ -50,9 +50,7 @@ func Set(config any, opts ...option) error {
 			return fmt.Errorf("load from source: %w", err)
 		}
 
-		for key, value := range values {
-			s.source[key] = value
-		}
+		maps.Copy(s.source, values)
 	}
 
 	if err := s.populateStruct(config); err != nil {
@@ -63,7 +61,7 @@ func Set(config any, opts ...option) error {
 }
 
 // populateStruct uses the items in settings.source to populate the passed in config struct.
-func (s settings) populateStruct(config any) error {
+func (s *settings) populateStruct(config any) error {
 	configStruct := reflect.ValueOf(config)
 	if configStruct.Kind() != reflect.Pointer || configStruct.Elem().Kind() != reflect.Struct {
 		return &InvalidConfigTypeError{ProvidedType: config}
@@ -80,41 +78,8 @@ func (s settings) populateStruct(config any) error {
 			continue
 		}
 
-		jsonOptionValue, jsonOptionSet := field.Tag.Lookup(tagJSON)
-		if jsonOptionSet {
-			err := json.Unmarshal([]byte(s.source[jsonOptionValue]), configFieldValue.Addr().Interface())
-			if err != nil {
-				return fmt.Errorf("unmarshal JSON: %w", err)
-			}
-			continue
-		}
-
-		if err := s.handlePrefixTag(field, configFieldValue, ""); err != nil {
-			return fmt.Errorf("handle prefix tag: %w", err)
-		}
-
-		key := field.Tag.Get(tagEnv)
-		if key == "" {
-			continue
-		}
-
-		value := s.source[key]
-		if value == "" {
-			if err := checkRequiredTag(key, field); err != nil {
-				return fmt.Errorf("check required tag: %w", err)
-			}
-
-			value = field.Tag.Get(tagDefault)
-		}
-
-		value, err := s.resolveReplacement(value)
-		if err != nil {
-			return fmt.Errorf("resolve replacement: %w", err)
-		}
-
-		if err := s.setFieldValue(
-			configFieldValue, entry{key, value}); err != nil {
-			return fmt.Errorf("set field value: %w", err)
+		if err := chain.Handle(field, configFieldValue, s, ""); err != nil {
+			return fmt.Errorf("process field '%s': %w", field.Name, err)
 		}
 	}
 
@@ -123,7 +88,7 @@ func (s settings) populateStruct(config any) error {
 
 // resolveReplacement checks if a string has the pattern of ${...}, and if so, uses values in settings.source to
 // replace the pattern, and returns the newly created string.
-func (s settings) resolveReplacement(value string) (string, error) {
+func (s *settings) resolveReplacement(value string) (string, error) {
 	match := textReplacementRegex.FindStringSubmatch(value)
 
 	for _, m := range match {
@@ -142,36 +107,18 @@ func (s settings) resolveReplacement(value string) (string, error) {
 }
 
 // populateNestedConfig populates a nested struct.
-func (s settings) populateNestedConfig(nestedConfig reflect.Value, prefix string) error {
+func (s *settings) populateNestedConfig(nestedConfig reflect.Value, prefix string) error {
 	for i := range nestedConfig.NumField() {
 		field := nestedConfig.Type().Field(i)
 		configFieldValue := nestedConfig.Field(i)
 
-		if !configFieldValue.CanSet() || !configFieldValue.IsZero() {
+		if !configFieldValue.CanSet() {
 			continue
 		}
 
-		jsonOptionValue, jsonOptionSet := field.Tag.Lookup(tagJSON)
-		if jsonOptionSet {
-			err := json.Unmarshal([]byte(s.source[jsonOptionValue]), &configFieldValue)
-			if err != nil {
-				return fmt.Errorf("handle JSON tag: %w", err)
-			}
-
-			continue
-		}
-
-		if err := s.handlePrefixTag(field, configFieldValue, prefix); err != nil {
-			return fmt.Errorf("handle prefix tag: %w", err)
-		}
-
-		environmentVariableKey := prefix + field.Tag.Get(tagEnv)
-		if environmentVariableKey == prefix { // Ensure tag is set.
-			continue
-		}
-		if err := s.setFieldValue(
-			configFieldValue, entry{environmentVariableKey, s.source[environmentVariableKey]}); err != nil {
-			return fmt.Errorf("set field value: %w", err)
+		// Process the field with the chain.
+		if err := chain.Handle(field, configFieldValue, s, prefix); err != nil {
+			return fmt.Errorf("error processing field '%s': %w", field.Name, err)
 		}
 	}
 
