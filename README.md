@@ -89,10 +89,14 @@ func main() {
 
     var cfg Config
 
+    activeProfile := os.Getenv("ACTIVE_PROFILE")
+    if activeProfile == "" {
+        activeProfile = "default"
+    }
+
     if err := envconfig.Set(
         &cfg,
-        WithActiveProfile(os.Getenv("ACTIVE_PROFILE")),
-        WithFilepath("internal/config/"), // Will use file `internal/config/development.env`.
+        WithActiveProfile("internal/config/", activeProfile),
     ); err != nil {
         panic(err)
     }

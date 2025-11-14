@@ -4,7 +4,6 @@ package envconfig
 import (
 	"fmt"
 	"maps"
-	"path/filepath"
 	"reflect"
 	"regexp"
 	"strings"
@@ -29,20 +28,6 @@ func Set(config any, opts ...option) error {
 	}
 
 	s.sources = append(s.sources, EnvironmentVariableSource{}, FlagSource{})
-
-	if s.activeProfile != "" {
-		if s.filepath == "" {
-			return fmt.Errorf("assign active profile: %w", &IncompatibleOptionsError{
-				FirstOption:  "WithActiveProfile()",
-				SecondOption: "WithFilepath()",
-				Reason:       "directory in filepath option must be provided when using active profile",
-			})
-		}
-
-		dir, _ := filepath.Split(s.filepath)
-
-		s.filepath = dir + s.activeProfile + envExtension
-	}
 
 	for _, source := range s.sources {
 		values, err := source.Load()
