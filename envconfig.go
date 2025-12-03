@@ -10,14 +10,12 @@ import (
 	"strings"
 )
 
-type entry struct {
-	key, value string
-}
+const envExtension = ".env"
 
 // textReplacementRegex is used to detect text replacement in environment variables.
 var textReplacementRegex = regexp.MustCompile(`\${[^}]+}`)
 
-// Set will parse multiple sources for config values, and use these values to populate the passed in config struct.
+// Set parses multiple sources for config values and populates the passed config struct.
 func Set(config any, opts ...option) error {
 	s := &settings{
 		source:   map[string]string{},
@@ -28,22 +26,28 @@ func Set(config any, opts ...option) error {
 		opt(s)
 	}
 
-	s.sources = append(s.sources, EnvironmentVariableSource{}, FlagSource{})
-
-	if s.activeProfile != "" {
-		if s.filepath == "" {
-			return fmt.Errorf("assign active profile: %w", &IncompatibleOptionsError{
-				FirstOption:  "WithActiveProfile()",
-				SecondOption: "WithFilepath()",
-				Reason:       "directory in filepath option must be provided when using active profile",
-			})
+	// Process filepaths and create FileSources
+	for _, f := range s.filepaths {
+		path := f
+		if s.activeProfile != "" {
+			dir, _ := filepath.Split(path)
+			path = filepath.Join(dir, s.activeProfile+envExtension)
 		}
-
-		dir, _ := filepath.Split(s.filepath)
-
-		s.filepath = dir + s.activeProfile + envExtension
+		s.sources = append(s.sources, FileSource{Filepath: path})
 	}
 
+	if s.activeProfile != "" && len(s.filepaths) == 0 {
+		return fmt.Errorf("assign active profile: %w", &IncompatibleOptionsError{
+			FirstOption:  "WithActiveProfile()",
+			SecondOption: "WithFilepath()",
+			Reason:       "directory in filepath option must be provided when using active profile",
+		})
+	}
+
+	// Add EnvironmentVariableSource and FlagSource at the end
+	s.sources = append(s.sources, EnvironmentVariableSource{}, FlagSource{})
+
+	// Load all sources
 	for _, source := range s.sources {
 		values, err := source.Load()
 		if err != nil {
@@ -62,118 +66,99 @@ func Set(config any, opts ...option) error {
 	return nil
 }
 
-// populateStruct uses the items in settings.source to populate the passed in config struct.
-func (s settings) populateStruct(config any) error {
-	configStruct := reflect.ValueOf(config)
-	if configStruct.Kind() != reflect.Pointer || configStruct.Elem().Kind() != reflect.Struct {
+// populateStruct populates the config struct using the loaded values.
+func (s *settings) populateStruct(config any) error {
+	configValue := reflect.ValueOf(config)
+	if configValue.Kind() != reflect.Pointer || configValue.Elem().Kind() != reflect.Struct {
 		return &InvalidConfigTypeError{ProvidedType: config}
 	}
 
-	configValue := reflect.ValueOf(config).Elem()
+	// Pass s.prefix to the recursive function so top-level fields respect the prefix option.
+	return s.populateStructRecursive(configValue.Elem(), s.prefix)
+}
 
-	for i := range configValue.NumField() {
-		field := configValue.Type().Field(i)
-		configFieldValue := configValue.Field(i)
+func (s *settings) populateStructRecursive(structValue reflect.Value, prefix string) error {
+	structType := structValue.Type()
 
-		// Ignore fields that are not exported.
-		if !configFieldValue.CanSet() {
+	for i := 0; i < structValue.NumField(); i++ {
+		field := structType.Field(i)
+		fieldValue := structValue.Field(i)
+
+		if !fieldValue.CanSet() {
 			continue
 		}
 
-		jsonOptionValue, jsonOptionSet := field.Tag.Lookup(tagJSON)
-		if jsonOptionSet {
-			err := json.Unmarshal([]byte(s.source[jsonOptionValue]), configFieldValue.Addr().Interface())
-			if err != nil {
-				return fmt.Errorf("unmarshal JSON: %w", err)
+		// Handle JSON tag
+		if jsonKey, ok := field.Tag.Lookup(tagJSON); ok {
+			if val, exists := s.source[jsonKey]; exists {
+				if err := json.Unmarshal([]byte(val), fieldValue.Addr().Interface()); err != nil {
+					return fmt.Errorf("unmarshal JSON for field %s: %w", field.Name, err)
+				}
+				continue
 			}
+		}
+
+		// Handle Prefix tag (Nested Structs)
+		if prefixTag, ok := field.Tag.Lookup(tagPrefix); ok {
+			if fieldValue.Kind() == reflect.Struct {
+				if err := s.populateStructRecursive(fieldValue, prefix+prefixTag); err != nil {
+					return fmt.Errorf("populate nested struct %s: %w", field.Name, err)
+				}
+				continue
+			}
+		}
+
+		// Handle Env tag
+		envKey := field.Tag.Get(tagEnv)
+		if envKey == "" {
 			continue
 		}
 
-		if err := s.handlePrefixTag(field, configFieldValue, ""); err != nil {
-			return fmt.Errorf("handle prefix tag: %w", err)
-		}
+		fullKey := prefix + envKey
+		value := s.source[fullKey]
 
-		key := field.Tag.Get(tagEnv)
-		if key == "" {
-			continue
-		}
-
-		value := s.source[key]
+		// Handle Default / Required
 		if value == "" {
-			if err := checkRequiredTag(key, field); err != nil {
-				return fmt.Errorf("check required tag: %w", err)
+			if err := checkRequiredTag(fullKey, field); err != nil {
+				return err
 			}
-
 			value = field.Tag.Get(tagDefault)
 		}
 
-		value, err := s.resolveReplacement(value)
-		if err != nil {
-			return fmt.Errorf("resolve replacement: %w", err)
+		// Handle Text Replacement
+		if value != "" {
+			var err error
+			value, err = s.resolveReplacement(value)
+			if err != nil {
+				return err
+			}
 		}
 
-		if err := s.setFieldValue(
-			configFieldValue, entry{key, value}); err != nil {
-			return fmt.Errorf("set field value: %w", err)
+		// Set Value
+		if value != "" {
+			// Pass fullKey and value directly, no entry struct.
+			if err := s.setFieldValue(fieldValue, fullKey, value); err != nil {
+				return fmt.Errorf("set field %s: %w", field.Name, err)
+			}
 		}
 	}
-
 	return nil
 }
 
-// resolveReplacement checks if a string has the pattern of ${...}, and if so, uses values in settings.source to
-// replace the pattern, and returns the newly created string.
-func (s settings) resolveReplacement(value string) (string, error) {
+// resolveReplacement resolves ${VAR} patterns.
+func (s *settings) resolveReplacement(value string) (string, error) {
 	match := textReplacementRegex.FindStringSubmatch(value)
 
 	for _, m := range match {
-		environmentValue := strings.TrimPrefix(m, "${")
-		environmentValue = strings.TrimSuffix(environmentValue, "}")
+		key := strings.TrimSuffix(strings.TrimPrefix(m, "${"), "}")
 
-		replacementValue := s.source[environmentValue]
-		if replacementValue == "" {
-			return "", &ReplacementError{VariableName: environmentValue}
+		replacement, ok := s.source[key]
+		if !ok || replacement == "" {
+			return "", &ReplacementError{VariableName: key}
 		}
 
-		value = strings.ReplaceAll(value, m, replacementValue)
+		value = strings.ReplaceAll(value, m, replacement)
 	}
 
 	return value, nil
-}
-
-// populateNestedConfig populates a nested struct.
-func (s settings) populateNestedConfig(nestedConfig reflect.Value, prefix string) error {
-	for i := range nestedConfig.NumField() {
-		field := nestedConfig.Type().Field(i)
-		configFieldValue := nestedConfig.Field(i)
-
-		if !configFieldValue.CanSet() || !configFieldValue.IsZero() {
-			continue
-		}
-
-		jsonOptionValue, jsonOptionSet := field.Tag.Lookup(tagJSON)
-		if jsonOptionSet {
-			err := json.Unmarshal([]byte(s.source[jsonOptionValue]), &configFieldValue)
-			if err != nil {
-				return fmt.Errorf("handle JSON tag: %w", err)
-			}
-
-			continue
-		}
-
-		if err := s.handlePrefixTag(field, configFieldValue, prefix); err != nil {
-			return fmt.Errorf("handle prefix tag: %w", err)
-		}
-
-		environmentVariableKey := prefix + field.Tag.Get(tagEnv)
-		if environmentVariableKey == prefix { // Ensure tag is set.
-			continue
-		}
-		if err := s.setFieldValue(
-			configFieldValue, entry{environmentVariableKey, s.source[environmentVariableKey]}); err != nil {
-			return fmt.Errorf("set field value: %w", err)
-		}
-	}
-
-	return nil
 }

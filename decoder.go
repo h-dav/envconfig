@@ -7,6 +7,7 @@ import (
 	"time"
 )
 
+// DecoderFunc is a function that converts a string value to a specific type.
 type DecoderFunc func(key, value string) (reflect.Value, error)
 
 var defaultDecoders = map[reflect.Type]DecoderFunc{
@@ -60,67 +61,60 @@ var defaultDecoders = map[reflect.Type]DecoderFunc{
 	},
 }
 
+// Setter is an interface that can be implemented by types that want to self-configure.
 type Setter interface {
 	Set(value string) error
 }
 
-// setFieldValue determines the type of a config field, and branch out to the correct
-// function to populate that data type.
-func (s settings) setFieldValue(
-	configFieldValue reflect.Value,
-	entry entry,
-) error {
-	fieldAddr := configFieldValue.Addr()
+// setFieldValue sets the value of a field.
+func (s *settings) setFieldValue(fieldValue reflect.Value, key, value string) error {
+	fieldAddr := fieldValue.Addr()
 
 	if setter, ok := fieldAddr.Interface().(Setter); ok {
-		return setter.Set(entry.value)
+		return setter.Set(value)
 	}
 
-	if dec, ok := s.decoders[configFieldValue.Type()]; ok {
-		decodedValue, err := dec(entry.key, entry.value)
+	if dec, ok := s.decoders[fieldValue.Type()]; ok {
+		decodedValue, err := dec(key, value)
 		if err != nil {
 			return err
 		}
-		configFieldValue.Set(decodedValue)
+		fieldValue.Set(decodedValue)
 		return nil
 	}
 
-	switch configFieldValue.Interface().(type) {
+	switch fieldValue.Interface().(type) {
 	case string:
-		configFieldValue.SetString(entry.value)
+		fieldValue.SetString(value)
 	case []string:
-		return setStringSliceFieldValue(configFieldValue, entry.value)
+		return setStringSliceFieldValue(fieldValue, value)
 	case []int:
-		return setIntSliceFieldValue(configFieldValue, entry)
+		return setIntSliceFieldValue(fieldValue, key, value)
 	case []float64:
-		return setFloatSliceFieldValue(configFieldValue, entry)
+		return setFloatSliceFieldValue(fieldValue, key, value)
 	default:
-		return &UnsupportedFieldTypeError{FieldType: configFieldValue.Interface()}
+		return &UnsupportedFieldTypeError{FieldType: fieldValue.Interface()}
 	}
 
 	return nil
 }
 
-func setStringSliceFieldValue(configFieldValue reflect.Value, environmentValue string) error {
-	values := strings.Split(environmentValue, ",")
-	slice := reflect.MakeSlice(configFieldValue.Type(), len(values), len(values))
+func setStringSliceFieldValue(fieldValue reflect.Value, value string) error {
+	values := strings.Split(value, ",")
+	slice := reflect.MakeSlice(fieldValue.Type(), len(values), len(values))
 
 	for i, v := range values {
 		v = strings.TrimSpace(v)
 		slice.Index(i).SetString(v)
 	}
 
-	configFieldValue.Set(slice)
-
+	fieldValue.Set(slice)
 	return nil
 }
 
-func setIntSliceFieldValue(
-	configFieldValue reflect.Value,
-	entry entry,
-) error {
-	values := strings.Split(entry.value, ",")
-	slice := reflect.MakeSlice(configFieldValue.Type(), len(values), len(values))
+func setIntSliceFieldValue(fieldValue reflect.Value, key, value string) error {
+	values := strings.Split(value, ",")
+	slice := reflect.MakeSlice(fieldValue.Type(), len(values), len(values))
 
 	for i, v := range values {
 		v = strings.TrimSpace(v)
@@ -128,7 +122,7 @@ func setIntSliceFieldValue(
 		parsed, err := strconv.Atoi(v)
 		if err != nil {
 			return &FieldConversionError{
-				FieldName:  entry.key,
+				FieldName:  key,
 				TargetType: "[]int",
 				Err:        err,
 			}
@@ -137,17 +131,13 @@ func setIntSliceFieldValue(
 		slice.Index(i).SetInt(int64(parsed))
 	}
 
-	configFieldValue.Set(slice)
-
+	fieldValue.Set(slice)
 	return nil
 }
 
-func setFloatSliceFieldValue(
-	configFieldValue reflect.Value,
-	entry entry,
-) error {
-	values := strings.Split(entry.value, ",")
-	slice := reflect.MakeSlice(configFieldValue.Type(), len(values), len(values))
+func setFloatSliceFieldValue(fieldValue reflect.Value, key, value string) error {
+	values := strings.Split(value, ",")
+	slice := reflect.MakeSlice(fieldValue.Type(), len(values), len(values))
 
 	for i, v := range values {
 		v = strings.TrimSpace(v)
@@ -155,7 +145,7 @@ func setFloatSliceFieldValue(
 		parsed, err := strconv.ParseFloat(v, 64)
 		if err != nil {
 			return &FieldConversionError{
-				FieldName:  entry.key,
+				FieldName:  key,
 				TargetType: "[]float64",
 				Err:        err,
 			}
@@ -164,7 +154,6 @@ func setFloatSliceFieldValue(
 		slice.Index(i).SetFloat(parsed)
 	}
 
-	configFieldValue.Set(slice)
-
+	fieldValue.Set(slice)
 	return nil
 }

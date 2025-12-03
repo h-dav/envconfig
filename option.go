@@ -3,27 +3,24 @@ package envconfig
 import "reflect"
 
 type settings struct {
-	filepath        string
-	activeProfile   string
-	prefix          string
-	source          map[string]string
-	temporaryPrefix string // temporary prefix is only used we are populating nested structs
-	sources []source
-	decoders map[reflect.Type]DecoderFunc
+	filepaths     []string
+	activeProfile string
+	prefix        string
+	source        map[string]string
+	sources       []Source
+	decoders      map[reflect.Type]DecoderFunc
 }
 
 type option func(*settings)
 
-// WithFilepath option will cause the file provided to be used to set variables in the environment.
+// WithFilepath adds a file to be used for configuration loading.
 func WithFilepath(filepath string) option {
 	return func(s *settings) {
-		s.filepath = filepath
-		s.sources = append(s.sources, FileSource{
-			filepath: filepath,
-		})
+		s.filepaths = append(s.filepaths, filepath)
 	}
 }
 
+// WithActiveProfile sets the active profile.
 func WithActiveProfile(activeProfile string) option {
 	return func(s *settings) {
 		if activeProfile == "" {
@@ -33,13 +30,14 @@ func WithActiveProfile(activeProfile string) option {
 	}
 }
 
-// WithPrefix option will add the prefix to before every set and retrieval from env.
+// WithPrefix sets a global prefix for environment variables.
 func WithPrefix(prefix string) option {
 	return func(s *settings) {
 		s.prefix = prefix
 	}
 }
 
+// WithDecoders adds custom decoders for specific types.
 func WithDecoders(decoders map[reflect.Type]DecoderFunc) option {
 	return func(s *settings) {
 		if s.decoders == nil {
@@ -48,5 +46,12 @@ func WithDecoders(decoders map[reflect.Type]DecoderFunc) option {
 		for typ, dec := range decoders {
 			s.decoders[typ] = dec
 		}
+	}
+}
+
+// WithSource adds a custom source to the configuration loader.
+func WithSource(source Source) option {
+	return func(s *settings) {
+		s.sources = append(s.sources, source)
 	}
 }

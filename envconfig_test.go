@@ -168,9 +168,7 @@ func TestSet(t *testing.T) {
 	for tn, tc := range testCases {
 		t.Run(tn,
 			func(t *testing.T) {
-				t.Parallel()
-
-				loadFileIntoEnvironmentVariables(tc.filepath)
+				loadFileIntoEnvironmentVariables(t, tc.filepath)
 
 				tc.assert(t, tc)
 			},
@@ -178,7 +176,7 @@ func TestSet(t *testing.T) {
 	}
 }
 
-func loadFileIntoEnvironmentVariables(filepath string) {
+func loadFileIntoEnvironmentVariables(t *testing.T, filepath string) {
 	file, err := os.Open(filepath)
 	if err != nil {
 		log.Fatal(err)
@@ -187,7 +185,15 @@ func loadFileIntoEnvironmentVariables(filepath string) {
 
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
-		key, value, _ := strings.Cut(scanner.Text(), "=")
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+
+		key, value, found := strings.Cut(line, "=")
+		if !found {
+			continue
+		}
 
 		// Clean environment variable key.
 		key = strings.TrimSpace(key)
@@ -195,14 +201,12 @@ func loadFileIntoEnvironmentVariables(filepath string) {
 		// Clean a value of starting whitespace and comments.
 		value = strings.TrimSpace(value)
 		value, _, _ = strings.Cut(value, " #")
-		os.Setenv(key, value)
+		t.Setenv(key, value)
 	}
 
 	if err := scanner.Err(); err != nil {
 		log.Fatal(err)
 	}
-
-	return
 }
 
 func TestSetWithPrefix(t *testing.T) {
@@ -219,7 +223,7 @@ func TestSetWithPrefix(t *testing.T) {
 			assert: func(t *testing.T, tc testCase) {
 				t.Helper()
 
-				os.Setenv("PREFIX_DURATION", "10s")
+				t.Setenv("PREFIX_DURATION", "10s")
 
 				var config SuccessWithPrefixOption
 
@@ -240,8 +244,6 @@ func TestSetWithPrefix(t *testing.T) {
 	for tn, tc := range testCases {
 		t.Run(tn,
 			func(t *testing.T) {
-				t.Parallel()
-
 				tc.assert(t, tc)
 			},
 		)
@@ -260,7 +262,7 @@ func TestSetSuccessWithSliceStringField(t *testing.T) {
 	var want Config
 	want.SliceStringField = []string{"first", "second", "third"}
 
-	loadFileIntoEnvironmentVariables("./test_data/success_with_slice_string_field.env")
+	loadFileIntoEnvironmentVariables(t, "./test_data/success_with_slice_string_field.env")
 
 	envconfig.Set(&config)
 
@@ -279,7 +281,7 @@ func TestSetSuccessWithSliceIntField(t *testing.T) {
 	var want Config
 	want.SliceIntField = []int{1, 2, 3}
 
-	loadFileIntoEnvironmentVariables("./test_data/success_with_slice_int_field.env")
+	loadFileIntoEnvironmentVariables(t, "./test_data/success_with_slice_int_field.env")
 
 	envconfig.Set(&config)
 
@@ -298,7 +300,7 @@ func TestSetSuccessWithSliceFloatField(t *testing.T) {
 	var want Config
 	want.SliceFloatField = []float64{1.2, 2.3, 3.4}
 
-	loadFileIntoEnvironmentVariables("./test_data/success_with_slice_float_field.env")
+	loadFileIntoEnvironmentVariables(t, "./test_data/success_with_slice_float_field.env")
 
 	envconfig.Set(&config)
 
@@ -321,7 +323,7 @@ func TestSetSuccessWithNestedStruct(t *testing.T) {
 	var want Config
 	want.Server.Port = "8080"
 
-	loadFileIntoEnvironmentVariables("./test_data/success_with_nested_struct.env")
+	loadFileIntoEnvironmentVariables(t, "./test_data/success_with_nested_struct.env")
 
 	envconfig.Set(&config)
 
@@ -344,7 +346,7 @@ func TestSetSuccessWithDeeplyNestedStruct(t *testing.T) {
 	var want Config
 	want.Server.Port.Value = "1234"
 
-	loadFileIntoEnvironmentVariables("./test_data/success_with_deeply_nested_struct.env")
+	loadFileIntoEnvironmentVariables(t, "./test_data/success_with_deeply_nested_struct.env")
 
 	envconfig.Set(&config)
 
@@ -371,7 +373,7 @@ func TestSetSuccessWithThriceDeeplyNestedStruct(t *testing.T) {
 	want.Server.Database.Tables.First = "example_table"
 	want.Server.Database.Timezome = "uk/london"
 
-	loadFileIntoEnvironmentVariables("./test_data/success_with_thrice_deeply_nested_struct.env")
+	loadFileIntoEnvironmentVariables(t, "./test_data/success_with_thrice_deeply_nested_struct.env")
 
 	envconfig.Set(&config)
 
@@ -393,7 +395,7 @@ func TestSetSuccessWithJsonField(t *testing.T) {
 
 	var want Config
 	want.JSONField.First = "example"
-	loadFileIntoEnvironmentVariables("./test_data/success_with_json_field.env")
+	loadFileIntoEnvironmentVariables(t, "./test_data/success_with_json_field.env")
 
 	envconfig.Set(&config)
 

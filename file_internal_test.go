@@ -3,8 +3,6 @@ package envconfig
 import (
 	"reflect"
 	"testing"
-
-	"github.com/google/go-cmp/cmp"
 )
 
 func Test_identifyParser(t *testing.T) {
@@ -17,7 +15,7 @@ func Test_identifyParser(t *testing.T) {
 	testCases := map[string]testCase{
 		"expect env parser for env file": {
 			filepath: "example.env",
-			want:     envFileParser{},
+			want:     envFileParser{filepath: "example.env"},
 		},
 		"expect error due to invalid file extension": {
 			filepath: "example.invalid",
@@ -34,7 +32,7 @@ func Test_identifyParser(t *testing.T) {
 
 				got, err := identifyFileParser(tc.filepath)
 
-				if !cmp.Equal(tc.wantErr, err) {
+				if !reflect.DeepEqual(tc.wantErr, err) {
 					t.Errorf("wantErr: %#v, got: %#v", tc.wantErr, err)
 				}
 
