@@ -83,7 +83,7 @@ func TestSetWithFilepath(t *testing.T) {
 		if err := os.WriteFile(filepath, []byte(content), 0644); err != nil {
 			t.Fatalf("failed to create test file: %v", err)
 		}
-		defer os.Remove(filepath)
+		defer func() { _ = os.Remove(filepath) }()
 
 		var cfg Config
 		if err := envconfig.Set(&cfg, envconfig.WithFilepath(filepath), envconfig.WithPrefix("APP_")); err != nil {
@@ -105,12 +105,12 @@ func TestWithActiveProfile(t *testing.T) {
 	if err := os.WriteFile("./test_data/dev.env", []byte("VALUE=dev_val\n"), 0644); err != nil {
 		t.Fatalf("failed to create dev.env: %v", err)
 	}
-	defer os.Remove("./test_data/dev.env")
+	defer func() { _ = os.Remove("./test_data/dev.env") }()
 
 	if err := os.WriteFile("./test_data/default.env", []byte("VALUE=default_val\n"), 0644); err != nil {
 		t.Fatalf("failed to create default.env: %v", err)
 	}
-	defer os.Remove("./test_data/default.env")
+	defer func() { _ = os.Remove("./test_data/default.env") }()
 
 	t.Run("specific profile", func(t *testing.T) {
 		var cfg Config

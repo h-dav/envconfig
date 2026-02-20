@@ -134,6 +134,49 @@ func TestSet(t *testing.T) {
 		}
 	})
 
+	t.Run("deeply nested structs", func(t *testing.T) {
+		type Config struct {
+			Server struct {
+				Database struct {
+					User string `env:"USER"`
+				} `env:",prefix=DB_"`
+			} `env:",prefix=SERVER_"`
+		}
+
+		t.Setenv("SERVER_DB_USER", "admin")
+
+		var cfg Config
+		if err := envconfig.Set(&cfg); err != nil {
+			t.Fatalf("Set() error = %v", err)
+		}
+
+		if cfg.Server.Database.User != "admin" {
+			t.Errorf("got %q, want %q", cfg.Server.Database.User, "admin")
+		}
+	})
+
+	t.Run("complex slices", func(t *testing.T) {
+		type Config struct {
+			Empty []string `env:"EMPTY"`
+			Space []string `env:"SPACE"`
+		}
+
+		t.Setenv("EMPTY", "")
+		t.Setenv("SPACE", "a, ,b")
+
+		var cfg Config
+		if err := envconfig.Set(&cfg); err != nil {
+			t.Fatalf("Set() error = %v", err)
+		}
+
+		if len(cfg.Empty) != 1 || cfg.Empty[0] != "" {
+			t.Errorf("Empty: got %v", cfg.Empty)
+		}
+		if len(cfg.Space) != 3 || cfg.Space[1] != "" {
+			t.Errorf("Space: got %v", cfg.Space)
+		}
+	})
+
 	t.Run("envjson", func(t *testing.T) {
 		type Config struct {
 			Data struct {
