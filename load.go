@@ -8,17 +8,20 @@ import (
 	"strings"
 )
 
+// source represents a provider of configuration key-value pairs.
 type source interface {
 	Load() (map[string]string, error)
 }
 
+// FlagSource loads configuration from command-line flags.
 type FlagSource struct{}
 
 func (s FlagSource) Load() (map[string]string, error) {
-	flag.Parse()
+	if !flag.Parsed() {
+		flag.Parse()
+	}
 
 	source := make(map[string]string)
-
 	flag.Visit(func(f *flag.Flag) {
 		source[f.Name] = f.Value.String()
 	})
@@ -30,43 +33,36 @@ const (
 	envExtension = ".env"
 )
 
+// parser represents a file format parser for configuration.
 type parser interface {
 	parse() (map[string]string, error)
 }
 
+// FileSource loads configuration from a specific file.
 type FileSource struct {
 	filepath string
 }
 
 func (s FileSource) Load() (map[string]string, error) {
-	parser, err := identifyFileParser(s.filepath)
+	p, err := identifyFileParser(s.filepath)
 	if err != nil {
 		return nil, err
 	}
 
-	source, err := parser.parse()
-	if err != nil {
-		return nil, err
-	}
-
-	return source, nil
+	return p.parse()
 }
 
-// identifyFileParser determines the parser to use based on the filepath received.
+// identifyFileParser determines the parser to use based on the filepath extension.
 func identifyFileParser(f string) (parser, error) {
-	var parser parser
-
 	switch filepath.Ext(f) {
 	case envExtension:
-		parser = envFileParser{
-			source:   map[string]string{},
+		return envFileParser{
+			source:   make(map[string]string),
 			filepath: f,
-		}
+		}, nil
 	default:
 		return nil, &FileTypeValidationError{Filepath: f}
 	}
-
-	return parser, nil
 }
 
 type envFileParser struct {
@@ -77,9 +73,9 @@ type envFileParser struct {
 func (e envFileParser) parse() (map[string]string, error) {
 	file, err := os.Open(filepath.Clean(e.filepath))
 	if err != nil {
-		return make(map[string]string), &OpenFileError{Err: err}
+		return nil, &OpenFileError{Err: err}
 	}
-	defer file.Close() //nolint:errcheck // File closure.
+	defer file.Close() //nolint:errcheck
 
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
@@ -92,50 +88,42 @@ func (e envFileParser) parse() (map[string]string, error) {
 
 		entry, err := e.parseLine(line)
 		if err != nil {
-			return make(map[string]string), err
+			return nil, err
 		}
 
 		e.source[entry.key] = entry.value
 	}
 
 	if err := scanner.Err(); err != nil {
-		return make(map[string]string), &FileReadError{Filepath: e.filepath, Err: err}
+		return nil, &FileReadError{Filepath: e.filepath, Err: err}
 	}
 
 	return e.source, nil
 }
 
-// parseLine parses an individual .env line, and will detect comments.
+// parseLine parses an individual .env line.
 func (e envFileParser) parseLine(line string) (entry, error) {
 	key, value, found := strings.Cut(line, "=")
 	if !found {
 		return entry{}, &ParseError{Line: line, Err: ErrSyntax}
 	}
 
-	// Clean environment variable key.
-	key = strings.TrimSpace(key)
-
-	// Clean a value of starting whitespace and comments.
-	value = strings.TrimSpace(value)
-	value, _, _ = strings.Cut(value, " #")
-
-	return entry{key: key, value: value}, nil
+	return entry{
+		key:   strings.TrimSpace(key),
+		value: strings.TrimSpace(strings.Split(value, " #")[0]),
+	}, nil
 }
 
+// EnvironmentVariableSource loads configuration from environment variables.
 type EnvironmentVariableSource struct{}
 
-// processEnvironmentVariables populates the config struct using all environment variables.
-func (s EnvironmentVariableSource) Load() (map[string]string, error) { //nolint:gocognit // Complexity is reasonable.
+func (s EnvironmentVariableSource) Load() (map[string]string, error) {
 	source := make(map[string]string)
-	all := os.Environ()
-
-	for _, val := range all {
+	for _, val := range os.Environ() {
 		key, value, found := strings.Cut(val, "=")
-		if !found {
-			continue
+		if found {
+			source[key] = value
 		}
-
-		source[key] = value
 	}
 
 	return source, nil
