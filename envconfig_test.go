@@ -168,8 +168,6 @@ func TestSet(t *testing.T) {
 	for tn, tc := range testCases {
 		t.Run(tn,
 			func(t *testing.T) {
-				t.Parallel()
-
 				loadFileIntoEnvironmentVariables(tc.filepath)
 
 				tc.assert(t, tc)
@@ -237,15 +235,13 @@ func TestSetWithPrefix(t *testing.T) {
 		},
 	}
 
-	for tn, tc := range testCases {
-		t.Run(tn,
-			func(t *testing.T) {
-				t.Parallel()
-
-				tc.assert(t, tc)
-			},
-		)
-	}
+		for tn, tc := range testCases {
+			t.Run(tn,
+				func(t *testing.T) {
+					tc.assert(t, tc)
+				},
+			)
+		}
 }
 
 // Slice test cases.

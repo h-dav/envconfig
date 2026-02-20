@@ -23,11 +23,11 @@ func Set(config any, opts ...option) error {
 		decoders: defaultDecoders,
 	}
 
+	s.sources = append(s.sources, EnvironmentVariableSource{}, FlagSource{})
+
 	for _, opt := range opts {
 		opt(s)
 	}
-
-	s.sources = append(s.sources, EnvironmentVariableSource{}, FlagSource{})
 
 	for _, source := range s.sources {
 		values, err := source.Load()

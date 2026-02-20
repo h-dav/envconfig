@@ -116,7 +116,6 @@ func TestSetWithFilepath(t *testing.T) {
 	for tn, tc := range testCases {
 		t.Run(tn,
 			func(t *testing.T) {
-				t.Parallel()
 				tc.assert(t, tc)
 			},
 		)
