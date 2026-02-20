@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"strings"
 )
 
 const (
@@ -23,6 +24,55 @@ const (
 	// tagPrefix is used for nested structs inside your config struct.
 	tagPrefix = "prefix"
 )
+
+// TagMetadata contains the parsed information from a struct tag.
+type TagMetadata struct {
+	Name     string
+	Required bool
+	Default  string
+	Prefix   string
+	EnvJSON  bool
+}
+
+// ParseTag parses a struct tag into TagMetadata.
+func ParseTag(tag string) (TagMetadata, error) {
+	if tag == "" {
+		return TagMetadata{}, nil
+	}
+
+	parts := strings.Split(tag, ",")
+	metadata := TagMetadata{
+		Name: strings.TrimSpace(parts[0]),
+	}
+
+	for _, part := range parts[1:] {
+		part = strings.TrimSpace(part)
+		if part == "" {
+			continue
+		}
+
+		key, value, found := strings.Cut(part, "=")
+		key = strings.TrimSpace(key)
+		value = strings.TrimSpace(value)
+
+		if found && key == "" {
+			return TagMetadata{}, fmt.Errorf("malformed tag option: %s", part)
+		}
+
+		switch key {
+		case "required":
+			metadata.Required = true
+		case "envjson":
+			metadata.EnvJSON = true
+		case "default":
+			metadata.Default = value
+		case "prefix":
+			metadata.Prefix = value
+		}
+	}
+
+	return metadata, nil
+}
 
 var chain = &PrefixTagHandler{
 	BaseHandler: BaseHandler{
