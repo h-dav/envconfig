@@ -20,11 +20,11 @@ type SuccessWithOneIntField struct {
 }
 
 type SuccessWithDefaultValueAndEmptyEnvFile struct {
-	Example string `env:"DEFAULT_VALUE" default:"value2"`
+	Example string `env:"DEFAULT_VALUE,default=value2"`
 }
 
 type SuccessWithRequiredField struct {
-	Example string `env:"REQUIRED_VALUE" required:"true"`
+	Example string `env:"REQUIRED_VALUE,required"`
 }
 
 type SuccessWithTextReplacement struct {
@@ -309,7 +309,7 @@ func TestSetSuccessWithNestedStruct(t *testing.T) {
 	type Config struct {
 		Server struct {
 			Port string `env:"PORT"`
-		} `prefix:"SERVER_"`
+		} `env:",prefix=SERVER_"`
 	}
 
 	var config Config
@@ -331,8 +331,8 @@ func TestSetSuccessWithDeeplyNestedStruct(t *testing.T) {
 		Server struct {
 			Port struct {
 				Value string `env:"VALUE"`
-			} `prefix:"PORT_"`
-		} `prefix:"SERVER_"`
+			} `env:",prefix=PORT_"`
+		} `env:",prefix=SERVER_"`
 	}
 
 	var config Config
@@ -355,10 +355,10 @@ func TestSetSuccessWithThriceDeeplyNestedStruct(t *testing.T) {
 			Database struct {
 				Tables struct {
 					First string `env:"FIRST"`
-				} `prefix:"TABLES_"`
+				} `env:",prefix=TABLES_"`
 				Timezome string `env:"TIMEZONE"`
-			} `prefix:"DATABASE_"`
-		} `prefix:"SERVER_"`
+			} `env:",prefix=DATABASE_"`
+		} `env:",prefix=SERVER_"`
 	}
 
 	var config Config
@@ -382,7 +382,7 @@ func TestSetSuccessWithJsonField(t *testing.T) {
 	type Config struct {
 		JSONField struct {
 			First string `json:"first"`
-		} `envjson:"JSON_FIELD"`
+		} `env:"JSON_FIELD,envjson"`
 	}
 
 	var config Config
