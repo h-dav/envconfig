@@ -1,6 +1,6 @@
 # envconfig
 
-Package `envconfig` will populate your config struct based on sources such as environment variables, files, etc.
+Package `envconfig` will populate your config struct based on sources such as environment variables, flags, files, etc.
 
 - [Installation](#installation)
 - [Features](#features)
@@ -9,6 +9,7 @@ Package `envconfig` will populate your config struct based on sources such as en
     - [Other](#other)
     - [Examples](#examples)
 - [Merging Values](#merging-values)
+- [Error Handling](#error-handling)
 
 ## Installation
 
@@ -23,7 +24,10 @@ go get github.com/h-dav/envconfig/v3
 | Option                            | Description                                           |
 |-----------------------------------|-------------------------------------------------------|
 | `WithFilepath("config/file.env")` | Use file to populate config struct.                   |
-| `WithActiveProfile("dev_env")`    | Provide the profile to select a specific config file. |
+| `WithActiveProfile("internal/config/", "dev")`    | Provide the path and profile to select a specific config file (e.g., `internal/config/dev.env`). |
+| `WithPrefix("MYAPP_")`            | Add a global prefix to all environment variable lookups. |
+| `WithLogger(logger)`              | Provide a `*slog.Logger` for internal diagnostics.     |
+| `WithDecoders(map)`               | Register custom decoders for specific types.           |
 
 ### Struct Tags
 
@@ -49,6 +53,37 @@ go get github.com/h-dav/envconfig/v3
 > 2. **Environment Variables:** Application environment variables.
 > 3. **Config Files:** Provided via `WithFilepath()` or `WithActiveProfile()`.
 > 4. **Defaults:** Defined in struct tags using `,default=...`.
+
+## Error Handling
+
+`envconfig` uses structured error types to allow for robust error checking using standard library functions like `errors.Is` and `errors.As`.
+
+### Checking for Specific Errors
+
+```go
+err := envconfig.Set(&cfg)
+if err != nil {
+    if errors.Is(err, envconfig.ErrRequired) {
+        // Handle missing required field
+    }
+    
+    var jsonErr *envconfig.JSONUnmarshalError
+    if errors.As(err, &jsonErr) {
+        fmt.Printf("JSON error in field %s: %v\n", jsonErr.FieldName, jsonErr.Err)
+    }
+}
+```
+
+### Base Error Categories
+
+- `ErrInvalidConfig`: Output is not a pointer to a struct.
+- `ErrUnsupported`: Field type is not supported.
+- `ErrRequired`: A required field was missing.
+- `ErrFile`: Issues opening or reading a config file.
+- `ErrParse`: Syntax errors in `.env` files.
+- `ErrConversion`: Errors converting string values to target types.
+- `ErrJSON`: Errors unmarshaling JSON values.
+- `ErrTag`: Errors in struct tag definitions.
 
 ## Examples
 
@@ -78,50 +113,20 @@ func main() {
 
     var cfg Config
 
-    if err := envconfig.Set(&cfg, WithFilepath("internal/config/config.env")); err != nil {
+    if err := envconfig.Set(&cfg, envconfig.WithFilepath("internal/config/config.env")); err != nil {
         panic(err)
     }
 }
 ```
 
-### Profile
+### Diagnostics with slog
 
 ```go
 func main() {
-    type Config struct {
-        Service string `env:"SERVICE"`
-    }
-
+    logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelDebug}))
+    
     var cfg Config
-
-    activeProfile := os.Getenv("ACTIVE_PROFILE")
-    if activeProfile == "" {
-        activeProfile = "default"
-    }
-
-    if err := envconfig.Set(
-        &cfg,
-        WithActiveProfile("internal/config/", activeProfile),
-    ); err != nil {
-        panic(err)
-    }
-}
-```
-
-### Nested Structs
-
-```go
-func main() {
-    type Config struct {
-        Service struct {
-            Name string `env:"NAME"`
-            Version string `env:"VERSION"`
-        } `env:",prefix=SERVICE_"`
-    }
-
-    var cfg Config
-
-    if err := envconfig.Set(&cfg); err != nil {
+    if err := envconfig.Set(&cfg, envconfig.WithLogger(logger)); err != nil {
         panic(err)
     }
 }
