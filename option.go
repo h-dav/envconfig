@@ -12,10 +12,11 @@ type settings struct {
 	decoders map[reflect.Type]DecoderFunc
 }
 
-type option func(*settings)
+// Option is a functional option for configuring the Set function.
+type Option func(*settings)
 
-// WithFilepath option will cause the file provided to be used to set variables in the environment.
-func WithFilepath(filepath string) option {
+// WithFilepath causes the file at the provided path to be loaded into the environment variables.
+func WithFilepath(filepath string) Option {
 	return func(s *settings) {
 		s.sources = append(s.sources, FileSource{
 			filepath: filepath,
@@ -23,25 +24,29 @@ func WithFilepath(filepath string) option {
 	}
 }
 
-func WithActiveProfile(filepath, activeProfile string) option {
+// WithActiveProfile loads a profile-specific environment file.
+// It constructs the filename as: path + activeProfile + ".env".
+// If activeProfile is empty, it defaults to "default".
+func WithActiveProfile(path, activeProfile string) Option {
 	return func(s *settings) {
 		if activeProfile == "" {
 			activeProfile = "default"
 		}
 		s.sources = append(s.sources, FileSource{
-			filepath: filepath + activeProfile + envExtension,
+			filepath: path + activeProfile + envExtension,
 		})
 	}
 }
 
-// WithPrefix option will add the prefix to before every set and retrieval from env.
-func WithPrefix(prefix string) option {
+// WithPrefix adds a prefix to all environment variable lookups.
+func WithPrefix(prefix string) Option {
 	return func(s *settings) {
 		s.prefix = prefix
 	}
 }
 
-func WithDecoders(decoders map[reflect.Type]DecoderFunc) option {
+// WithDecoders registers custom decoders for specific types.
+func WithDecoders(decoders map[reflect.Type]DecoderFunc) Option {
 	return func(s *settings) {
 		if s.decoders == nil {
 			s.decoders = make(map[reflect.Type]DecoderFunc)

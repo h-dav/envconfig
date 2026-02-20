@@ -16,7 +16,7 @@ type entry struct {
 var textReplacementRegex = regexp.MustCompile(`\${[^}]+}`)
 
 // Set will parse multiple sources for config values, and use these values to populate the passed in config struct.
-func Set(config any, opts ...option) error {
+func Set(config any, opts ...Option) error {
 	s := &settings{
 		source:   map[string]string{},
 		decoders: defaultDecoders,
