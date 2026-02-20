@@ -1,6 +1,7 @@
 package envconfig_test
 
 import (
+	"os"
 	"slices"
 	"testing"
 	"time"
@@ -225,6 +226,59 @@ func TestSet(t *testing.T) {
 		var cfg Config
 		if err := envconfig.Set(&cfg); err == nil {
 			t.Error("Set() expected error for malformed JSON, got nil")
+		}
+	})
+}
+
+func TestPrecedence(t *testing.T) {
+	type Config struct {
+		Value string `env:"VALUE,default=default_val"`
+	}
+
+	t.Run("Default only", func(t *testing.T) {
+		var cfg Config
+		if err := envconfig.Set(&cfg); err != nil {
+			t.Fatal(err)
+		}
+		if cfg.Value != "default_val" {
+			t.Errorf("got %q, want %q", cfg.Value, "default_val")
+		}
+	})
+
+	t.Run("File overwrites Default", func(t *testing.T) {
+		// Create temporary .env file
+		tmpFile := "precedence_test.env"
+		content := "VALUE=file_val\n"
+		if err := os.WriteFile(tmpFile, []byte(content), 0644); err != nil {
+			t.Fatal(err)
+		}
+		defer os.Remove(tmpFile)
+
+		var cfg Config
+		if err := envconfig.Set(&cfg, envconfig.WithFilepath(tmpFile)); err != nil {
+			t.Fatal(err)
+		}
+		if cfg.Value != "file_val" {
+			t.Errorf("got %q, want %q", cfg.Value, "file_val")
+		}
+	})
+
+	t.Run("Env overwrites File", func(t *testing.T) {
+		tmpFile := "precedence_test.env"
+		content := "VALUE=file_val\n"
+		if err := os.WriteFile(tmpFile, []byte(content), 0644); err != nil {
+			t.Fatal(err)
+		}
+		defer os.Remove(tmpFile)
+
+		t.Setenv("VALUE", "env_val")
+
+		var cfg Config
+		if err := envconfig.Set(&cfg, envconfig.WithFilepath(tmpFile)); err != nil {
+			t.Fatal(err)
+		}
+		if cfg.Value != "env_val" {
+			t.Errorf("got %q, want %q", cfg.Value, "env_val")
 		}
 	})
 }
