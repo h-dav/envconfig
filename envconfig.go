@@ -3,17 +3,7 @@ package envconfig
 
 import (
 	"maps"
-	"reflect"
-	"regexp"
-	"strings"
 )
-
-type entry struct {
-	key, value string
-}
-
-// textReplacementRegex is used to detect text replacement in environment variables.
-var textReplacementRegex = regexp.MustCompile(`\${[^}]+}`)
 
 // Set will parse multiple sources for config values, and use these values to populate the passed in config struct.
 func Set(config any, opts ...Option) error {
@@ -39,71 +29,6 @@ func Set(config any, opts ...Option) error {
 
 	if err := s.populateStruct(config); err != nil {
 		return err
-	}
-
-	return nil
-}
-
-// populateStruct uses the items in settings.source to populate the passed in config struct.
-func (s *settings) populateStruct(config any) error {
-	configStruct := reflect.ValueOf(config)
-	if configStruct.Kind() != reflect.Pointer || configStruct.Elem().Kind() != reflect.Struct {
-		return &InvalidConfigTypeError{ProvidedType: config}
-	}
-
-	configValue := reflect.ValueOf(config).Elem()
-
-	for i := range configValue.NumField() {
-		field := configValue.Type().Field(i)
-		configFieldValue := configValue.Field(i)
-
-		// Ignore fields that are not exported.
-		if !configFieldValue.CanSet() {
-			continue
-		}
-
-		if err := s.HandleField(field, configFieldValue, s.prefix); err != nil {
-			return &FieldError{FieldName: field.Name, Op: "process field", Err: err}
-		}
-	}
-
-	return nil
-}
-
-// resolveReplacement checks if a string has the pattern of ${...}, and if so, uses values in settings.source to
-// replace the pattern, and returns the newly created string.
-func (s *settings) resolveReplacement(value string) (string, error) {
-	match := textReplacementRegex.FindStringSubmatch(value)
-
-	for _, m := range match {
-		environmentValue := strings.TrimPrefix(m, "${")
-		environmentValue = strings.TrimSuffix(environmentValue, "}")
-
-		replacementValue := s.source[environmentValue]
-		if replacementValue == "" {
-			return "", &ReplacementError{VariableName: environmentValue}
-		}
-
-		value = strings.ReplaceAll(value, m, replacementValue)
-	}
-
-	return value, nil
-}
-
-// populateNestedConfig populates a nested struct.
-func (s *settings) populateNestedConfig(nestedConfig reflect.Value, prefix string) error {
-	for i := range nestedConfig.NumField() {
-		field := nestedConfig.Type().Field(i)
-		configFieldValue := nestedConfig.Field(i)
-
-		if !configFieldValue.CanSet() {
-			continue
-		}
-
-		// Process the field with the handler.
-		if err := s.HandleField(field, configFieldValue, prefix); err != nil {
-			return &FieldError{FieldName: field.Name, Op: "error processing field", Err: err}
-		}
 	}
 
 	return nil

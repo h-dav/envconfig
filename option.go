@@ -5,13 +5,6 @@ import (
 	"reflect"
 )
 
-type settings struct {
-	prefix   string
-	source   map[string]string
-	sources  []source
-	decoders map[reflect.Type]DecoderFunc
-}
-
 // Option is a functional option for configuring the Set function.
 type Option func(*settings)
 
