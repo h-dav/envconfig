@@ -3,7 +3,6 @@ package envconfig
 import (
 	"bufio"
 	"flag"
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -42,14 +41,13 @@ type FileSource struct {
 func (s FileSource) Load() (map[string]string, error) {
 	parser, err := identifyFileParser(s.filepath)
 	if err != nil {
-		return nil, fmt.Errorf("identify file parser: %w", err)
+		return nil, err
 	}
 
 	source, err := parser.parse()
 	if err != nil {
-		return nil, fmt.Errorf("parse file: %w", err)
+		return nil, err
 	}
-
 
 	return source, nil
 }
@@ -94,7 +92,7 @@ func (e envFileParser) parse() (map[string]string, error) {
 
 		entry, err := e.parseLine(line)
 		if err != nil {
-			return make(map[string]string), fmt.Errorf("parse line: %w", err)
+			return make(map[string]string), err
 		}
 
 		e.source[entry.key] = entry.value
@@ -111,7 +109,7 @@ func (e envFileParser) parse() (map[string]string, error) {
 func (e envFileParser) parseLine(line string) (entry, error) {
 	key, value, found := strings.Cut(line, "=")
 	if !found {
-		return entry{}, &ParseError{Line: line}
+		return entry{}, &ParseError{Line: line, Err: ErrSyntax}
 	}
 
 	// Clean environment variable key.

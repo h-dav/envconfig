@@ -2,7 +2,6 @@ package envconfig
 
 import (
 	"encoding/json"
-	"fmt"
 	"reflect"
 	"strings"
 )
@@ -43,7 +42,7 @@ func ParseTag(tag string) (TagMetadata, error) {
 		value = strings.TrimSpace(value)
 
 		if found && key == "" {
-			return TagMetadata{}, fmt.Errorf("malformed tag option: %s", part)
+			return TagMetadata{}, &MalformedTagError{Tag: tag}
 		}
 
 		switch key {
@@ -74,7 +73,7 @@ func (s *settings) HandleField(field reflect.StructField, value reflect.Value, p
 		if metadata.Prefix != "" {
 			newPrefix := prefix + metadata.Prefix
 			if err := s.populateNestedConfig(value, newPrefix); err != nil {
-				return fmt.Errorf("handle nested struct for field '%s': %w", field.Name, err)
+				return &FieldError{FieldName: field.Name, Op: "handle nested struct", Err: err}
 			}
 			// Stop if we handle a prefix tag.
 			return nil
@@ -104,7 +103,7 @@ func (s *settings) HandleField(field reflect.StructField, value reflect.Value, p
 				return err
 			}
 			if err := s.setFieldValue(value, entry{key: key, value: resolvedValue}); err != nil {
-				return fmt.Errorf("set value for field '%s': %w", field.Name, err)
+				return &FieldError{FieldName: field.Name, Op: "set value", Err: err}
 			}
 		}
 	}
@@ -112,7 +111,7 @@ func (s *settings) HandleField(field reflect.StructField, value reflect.Value, p
 	// Handle Default
 	if value.IsZero() && metadata.Default != "" {
 		if err := s.setFieldValue(value, entry{field.Name, metadata.Default}); err != nil {
-			return fmt.Errorf("set default value for field '%s': %w", field.Name, err)
+			return &FieldError{FieldName: field.Name, Op: "set default value", Err: err}
 		}
 	}
 

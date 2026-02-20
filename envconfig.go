@@ -2,7 +2,6 @@
 package envconfig
 
 import (
-	"fmt"
 	"maps"
 	"reflect"
 	"regexp"
@@ -32,14 +31,14 @@ func Set(config any, opts ...option) error {
 	for _, source := range s.sources {
 		values, err := source.Load()
 		if err != nil {
-			return fmt.Errorf("load from source: %w", err)
+			return &FieldError{Op: "load from source", Err: err}
 		}
 
 		maps.Copy(s.source, values)
 	}
 
 	if err := s.populateStruct(config); err != nil {
-		return fmt.Errorf("populate config struct: %w", err)
+		return err
 	}
 
 	return nil
@@ -64,7 +63,7 @@ func (s *settings) populateStruct(config any) error {
 		}
 
 		if err := s.HandleField(field, configFieldValue, s.prefix); err != nil {
-			return fmt.Errorf("process field '%s': %w", field.Name, err)
+			return &FieldError{FieldName: field.Name, Op: "process field", Err: err}
 		}
 	}
 
@@ -103,7 +102,7 @@ func (s *settings) populateNestedConfig(nestedConfig reflect.Value, prefix strin
 
 		// Process the field with the handler.
 		if err := s.HandleField(field, configFieldValue, prefix); err != nil {
-			return fmt.Errorf("error processing field '%s': %w", field.Name, err)
+			return &FieldError{FieldName: field.Name, Op: "error processing field", Err: err}
 		}
 	}
 
