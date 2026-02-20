@@ -87,7 +87,11 @@ func (s *settings) HandleField(field reflect.StructField, value reflect.Value, p
 		if jsonString, exists := s.source[key]; exists {
 			if value.CanAddr() {
 				if err := json.Unmarshal([]byte(jsonString), value.Addr().Interface()); err != nil {
-					return fmt.Errorf("failed to unmarshal JSON for field '%s': %w", field.Name, err)
+					return &JSONUnmarshalError{
+						FieldName: field.Name,
+						RawValue:  jsonString,
+						Err:       err,
+					}
 				}
 			}
 		}

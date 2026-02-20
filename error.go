@@ -123,3 +123,18 @@ func (e *FileReadError) Error() string {
 
 // Unwrap allows FileReadError to be used with errors.Is and errors.As.
 func (e *FileReadError) Unwrap() error { return e.Err }
+
+// JSONUnmarshalError occurs when a field marked with 'envjson' fails to unmarshal.
+type JSONUnmarshalError struct {
+	FieldName string
+	RawValue  string
+	Err       error
+}
+
+// Error satisfies the error interface for JSONUnmarshalError.
+func (e *JSONUnmarshalError) Error() string {
+	return fmt.Sprintf("failed to unmarshal JSON for field %v with value %q: %v", e.FieldName, e.RawValue, e.Err.Error())
+}
+
+// Unwrap allows JSONUnmarshalError to be used with errors.Is and errors.As.
+func (e *JSONUnmarshalError) Unwrap() error { return e.Err }
