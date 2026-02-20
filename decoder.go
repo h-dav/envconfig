@@ -73,7 +73,13 @@ func (s settings) setFieldValue(
 	fieldAddr := configFieldValue.Addr()
 
 	if setter, ok := fieldAddr.Interface().(Setter); ok {
-		return setter.Set(entry.value)
+		if err := setter.Set(entry.value); err != nil {
+			return &FieldConversionError{
+				FieldName: entry.key,
+				Err:       err,
+			}
+		}
+		return nil
 	}
 
 	if dec, ok := s.decoders[configFieldValue.Type()]; ok {
