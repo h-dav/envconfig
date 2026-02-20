@@ -199,8 +199,6 @@ func loadFileIntoEnvironmentVariables(filepath string) {
 	if err := scanner.Err(); err != nil {
 		log.Fatal(err)
 	}
-
-	return
 }
 
 func TestSetWithPrefix(t *testing.T) {

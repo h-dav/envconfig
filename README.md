@@ -27,11 +27,13 @@ go get github.com/h-dav/envconfig/v3
 
 ### Struct Tags
 
-- `env`: Used to determine the key of the value to use when populating config fields.
-- `required`: `true` or `false`
-- `default`: Default value if environment variable is not set.
-- `prefix`: Used for nested structures.
-- `envjson`: Used for deserialising JSON into config.
+- `env`: Used to define environment variable mapping and options.
+  - Format: `env:"NAME[,option1,option2=value,...]"`
+  - Options:
+    - `required`: Marks the field as mandatory.
+    - `default=<value>`: Specifies a default value if the environment variable is not set.
+    - `prefix=<prefix>`: Specifies a prefix for nested structs.
+    - `envjson`: Indicates that the value should be deserialized from JSON.
 
 ### Other
 
@@ -52,7 +54,7 @@ go get github.com/h-dav/envconfig/v3
 ```go
 func main() {
     type Config struct {
-        Development bool `env:"DEVELOPMENT" default:"true"`
+        Development bool `env:"DEVELOPMENT,default=true"`
     }
 
     var cfg Config
@@ -68,7 +70,7 @@ func main() {
 ```go
 func main() {
     type Config struct {
-        Service string `env:"SERVICE"`
+        Service string `env:"SERVICE,required"`
     }
 
     var cfg Config
@@ -111,7 +113,7 @@ func main() {
         Service struct {
             Name string `env:"NAME"`
             Version string `env:"VERSION"`
-        } `prefix:"SERVICE_"`
+        } `env:",prefix=SERVICE_"`
     }
 
     var cfg Config
