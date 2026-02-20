@@ -2,6 +2,7 @@ package envconfig
 
 import (
 	"encoding/json"
+	"log/slog"
 	"reflect"
 	"regexp"
 	"strings"
@@ -12,6 +13,7 @@ type settings struct {
 	source   map[string]string
 	sources  []source
 	decoders map[reflect.Type]DecoderFunc
+	logger   *slog.Logger
 }
 
 type entry struct {
@@ -98,6 +100,9 @@ func (s *settings) HandleField(field reflect.StructField, value reflect.Value, p
 	if field.Type.Kind() == reflect.Struct {
 		if metadata.Prefix != "" {
 			newPrefix := prefix + metadata.Prefix
+			if s.logger != nil {
+				s.logger.Debug("entering nested struct", slog.String("field", field.Name), slog.String("prefix", newPrefix))
+			}
 			if err := s.populateNestedConfig(value, newPrefix); err != nil {
 				return &FieldError{FieldName: field.Name, Op: "handle nested struct", Err: err}
 			}
@@ -110,6 +115,9 @@ func (s *settings) HandleField(field reflect.StructField, value reflect.Value, p
 	if metadata.EnvJSON {
 		key := prefix + metadata.Name
 		if jsonString, exists := s.source[key]; exists {
+			if s.logger != nil {
+				s.logger.Debug("unmarshaling JSON field", slog.String("field", field.Name), slog.String("key", key))
+			}
 			if value.CanAddr() {
 				if err := json.Unmarshal([]byte(jsonString), value.Addr().Interface()); err != nil {
 					return &JSONUnmarshalError{
@@ -128,6 +136,9 @@ func (s *settings) HandleField(field reflect.StructField, value reflect.Value, p
 			if err != nil {
 				return err
 			}
+			if s.logger != nil {
+				s.logger.Debug("setting field value", slog.String("field", field.Name), slog.String("key", key))
+			}
 			if err := s.setFieldValue(value, entry{key: key, value: resolvedValue}); err != nil {
 				return &FieldError{FieldName: field.Name, Op: "set value", Err: err}
 			}
@@ -136,6 +147,9 @@ func (s *settings) HandleField(field reflect.StructField, value reflect.Value, p
 
 	// Handle Default
 	if value.IsZero() && metadata.Default != "" {
+		if s.logger != nil {
+			s.logger.Debug("setting default value", slog.String("field", field.Name), slog.String("default", metadata.Default))
+		}
 		if err := s.setFieldValue(value, entry{field.Name, metadata.Default}); err != nil {
 			return &FieldError{FieldName: field.Name, Op: "set default value", Err: err}
 		}

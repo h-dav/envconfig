@@ -2,6 +2,7 @@
 package envconfig
 
 import (
+	"log/slog"
 	"maps"
 )
 
@@ -18,11 +19,12 @@ func Set(config any, opts ...Option) error {
 	}
 
 	// Default sources: Environment variables and Flags.
-	// We add them after options so they can be overridden if needed, 
-	// or they can be the base. Actually, the precedence is determined by the order in s.sources.
 	s.sources = append(s.sources, EnvironmentVariableSource{}, FlagSource{})
 
 	for _, src := range s.sources {
+		if s.logger != nil {
+			s.logger.Debug("loading values from source", slog.String("source", src.SourceType()))
+		}
 		values, err := src.Load()
 		if err != nil {
 			return &FieldError{Op: "load from source", Err: err}

@@ -11,6 +11,7 @@ import (
 // source represents a provider of configuration key-value pairs.
 type source interface {
 	Load() (map[string]string, error)
+	SourceType() string
 }
 
 // FlagSource loads configuration from command-line flags.
@@ -28,6 +29,8 @@ func (s FlagSource) Load() (map[string]string, error) {
 
 	return source, nil
 }
+
+func (s FlagSource) SourceType() string { return "Flag" }
 
 const (
 	envExtension = ".env"
@@ -51,6 +54,8 @@ func (s FileSource) Load() (map[string]string, error) {
 
 	return p.parse()
 }
+
+func (s FileSource) SourceType() string { return "File (" + s.filepath + ")" }
 
 // identifyFileParser determines the parser to use based on the filepath extension.
 func identifyFileParser(f string) (parser, error) {
@@ -128,3 +133,5 @@ func (s EnvironmentVariableSource) Load() (map[string]string, error) {
 
 	return source, nil
 }
+
+func (s EnvironmentVariableSource) SourceType() string { return "Environment" }

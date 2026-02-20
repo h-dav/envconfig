@@ -1,6 +1,7 @@
 package envconfig
 
 import (
+	"log/slog"
 	"maps"
 	"reflect"
 )
@@ -45,5 +46,12 @@ func WithDecoders(decoders map[reflect.Type]DecoderFunc) Option {
 			s.decoders = make(map[reflect.Type]DecoderFunc)
 		}
 		maps.Copy(s.decoders, decoders)
+	}
+}
+
+// WithLogger provides a structured logger for internal diagnostics.
+func WithLogger(logger *slog.Logger) Option {
+	return func(s *settings) {
+		s.logger = logger
 	}
 }
