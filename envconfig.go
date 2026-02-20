@@ -63,7 +63,7 @@ func (s *settings) populateStruct(config any) error {
 			continue
 		}
 
-		if err := s.HandleField(field, configFieldValue, ""); err != nil {
+		if err := s.HandleField(field, configFieldValue, s.prefix); err != nil {
 			return fmt.Errorf("process field '%s': %w", field.Name, err)
 		}
 	}
