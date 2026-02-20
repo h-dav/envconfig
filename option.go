@@ -6,11 +6,10 @@ import (
 )
 
 type settings struct {
-	prefix          string
-	source          map[string]string
-	temporaryPrefix string // temporary prefix is only used we are populating nested structs
-	sources         []source
-	decoders        map[reflect.Type]DecoderFunc
+	prefix   string
+	source   map[string]string
+	sources  []source
+	decoders map[reflect.Type]DecoderFunc
 }
 
 type option func(*settings)

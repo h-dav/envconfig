@@ -86,31 +86,6 @@ func (e *RequiredFieldError) Error() string {
 	return fmt.Sprintf("required field is not set in environment variables: %v", e.FieldName)
 }
 
-// InvalidOptionConversionError occurs when an option is invalid for a field.
-type InvalidOptionConversionError struct {
-	FieldName string
-	Option    string
-	Err       error
-}
-
-// Error satisfies the error interface for InvalidOptionConversionError.
-func (e *InvalidOptionConversionError) Error() string {
-	return fmt.Sprintf("invalid option %v conversion for field %v: %v", e.Option, e.FieldName, e.Err.Error())
-}
-
-// Unwrap allows InvalidOptionConversionError to be used with errors.Is and errors.As.
-func (e *InvalidOptionConversionError) Unwrap() error { return e.Err }
-
-// PrefixOptionError occurs when the prefix tag is invalid or not set on a nested struct.
-type PrefixOptionError struct {
-	FieldName any
-}
-
-// Error satisfies the error interface for PrefixOptionError.
-func (e *PrefixOptionError) Error() string {
-	return fmt.Sprintf("prefix option is not set for nested struct field: %v", e.FieldName)
-}
-
 // ReplacementError occurs when the environment variable being used for replacement is not set.
 type ReplacementError struct {
 	VariableName string
@@ -148,20 +123,3 @@ func (e *FileReadError) Error() string {
 
 // Unwrap allows FileReadError to be used with errors.Is and errors.As.
 func (e *FileReadError) Unwrap() error { return e.Err }
-
-// IncompatibleOptionsError occurs when two options are incompatible with each other, or the usage is invalid.
-type IncompatibleOptionsError struct {
-	FirstOption  string
-	SecondOption string
-	Reason       string
-}
-
-// Error satisfies the error interface for FileReadError.
-func (e *IncompatibleOptionsError) Error() string {
-	return fmt.Sprintf(
-		"incompatible option usage of %v and %v: %v",
-		e.FirstOption,
-		e.SecondOption,
-		e.Reason,
-	)
-}

@@ -124,9 +124,7 @@ func (e envFileParser) parseLine(line string) (entry, error) {
 	return entry{key: key, value: value}, nil
 }
 
-type EnvironmentVariableSource struct {
-	prefix string
-}
+type EnvironmentVariableSource struct{}
 
 // processEnvironmentVariables populates the config struct using all environment variables.
 func (s EnvironmentVariableSource) Load() (map[string]string, error) { //nolint:gocognit // Complexity is reasonable.

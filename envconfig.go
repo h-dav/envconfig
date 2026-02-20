@@ -63,7 +63,7 @@ func (s *settings) populateStruct(config any) error {
 			continue
 		}
 
-		if err := chain.Handle(field, configFieldValue, s, ""); err != nil {
+		if err := s.HandleField(field, configFieldValue, s.prefix); err != nil {
 			return fmt.Errorf("process field '%s': %w", field.Name, err)
 		}
 	}
@@ -101,8 +101,8 @@ func (s *settings) populateNestedConfig(nestedConfig reflect.Value, prefix strin
 			continue
 		}
 
-		// Process the field with the chain.
-		if err := chain.Handle(field, configFieldValue, s, prefix); err != nil {
+		// Process the field with the handler.
+		if err := s.HandleField(field, configFieldValue, prefix); err != nil {
 			return fmt.Errorf("error processing field '%s': %w", field.Name, err)
 		}
 	}
