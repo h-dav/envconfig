@@ -22,8 +22,10 @@ func TestPrecedenceFull(t *testing.T) {
 	// 1. Default vs File
 	t.Run("File wins over Default", func(t *testing.T) {
 		tmpFile := "test1.env"
-		os.WriteFile(tmpFile, []byte("INTEGRATION_FLAG=file_val\n"), 0644)
-		defer os.Remove(tmpFile)
+		if err := os.WriteFile(tmpFile, []byte("INTEGRATION_FLAG=file_val\n"), 0644); err != nil {
+			t.Fatal(err)
+		}
+		defer func() { _ = os.Remove(tmpFile) }()
 
 		var cfg Config
 		if err := envconfig.Set(&cfg, envconfig.WithFilepath(tmpFile)); err != nil {
@@ -37,8 +39,10 @@ func TestPrecedenceFull(t *testing.T) {
 	// 2. File vs Env
 	t.Run("Env wins over File", func(t *testing.T) {
 		tmpFile := "test2.env"
-		os.WriteFile(tmpFile, []byte("INTEGRATION_FLAG=file_val\n"), 0644)
-		defer os.Remove(tmpFile)
+		if err := os.WriteFile(tmpFile, []byte("INTEGRATION_FLAG=file_val\n"), 0644); err != nil {
+			t.Fatal(err)
+		}
+		defer func() { _ = os.Remove(tmpFile) }()
 
 		t.Setenv("INTEGRATION_FLAG", "env_val")
 
@@ -55,11 +59,10 @@ func TestPrecedenceFull(t *testing.T) {
 	t.Run("Flag wins over Env", func(t *testing.T) {
 		t.Setenv("INTEGRATION_FLAG", "env_val")
 		
-		// Manually set the flag value since we can't easily call flag.Parse() with custom args here
-		// without affecting the whole test process.
-		// However, envconfig.FlagSource calls flag.Parse() and then visits flags.
-		// We can use flag.Set to simulate a flag being passed.
-		flag.Set("INTEGRATION_FLAG", "flag_val")
+		// Manually set the flag value.
+		if err := flag.Set("INTEGRATION_FLAG", "flag_val"); err != nil {
+			t.Fatal(err)
+		}
 
 		var cfg Config
 		if err := envconfig.Set(&cfg); err != nil {
@@ -76,8 +79,10 @@ func TestPrecedenceFull(t *testing.T) {
 		}
 
 		tmpFile := "test_slice.env"
-		os.WriteFile(tmpFile, []byte("SLICE=a,b,c\n"), 0644)
-		defer os.Remove(tmpFile)
+		if err := os.WriteFile(tmpFile, []byte("SLICE=a,b,c\n"), 0644); err != nil {
+			t.Fatal(err)
+		}
+		defer func() { _ = os.Remove(tmpFile) }()
 
 		t.Setenv("SLICE", "env1,env2")
 
@@ -100,8 +105,10 @@ func TestPrecedenceFull(t *testing.T) {
 		}
 
 		tmpFile := "test_nested.env"
-		os.WriteFile(tmpFile, []byte("SERVER_PORT=8080\n"), 0644)
-		defer os.Remove(tmpFile)
+		if err := os.WriteFile(tmpFile, []byte("SERVER_PORT=8080\n"), 0644); err != nil {
+			t.Fatal(err)
+		}
+		defer func() { _ = os.Remove(tmpFile) }()
 
 		t.Setenv("SERVER_PORT", "9090")
 

@@ -42,10 +42,13 @@ go get github.com/h-dav/envconfig/v3
 ## Merging Values
 
 > [!IMPORTANT]
-> When merging values, `envconfig` uses the following precedence:
-> 1. Flags
-> 2. Environment Variables
-> 3. Config File (provided via `WithFilepath()`)
+> When merging values, `envconfig` uses a strict precedence order. If a key is present in multiple sources, the value from the source with the highest precedence will be used (overwriting any lower precedence values).
+>
+> The precedence order (from highest to lowest) is:
+> 1. **Flags:** Command-line flags.
+> 2. **Environment Variables:** Application environment variables.
+> 3. **Config Files:** Provided via `WithFilepath()` or `WithActiveProfile()`.
+> 4. **Defaults:** Defined in struct tags using `,default=...`.
 
 ## Examples
 

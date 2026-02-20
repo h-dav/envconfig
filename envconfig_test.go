@@ -252,7 +252,7 @@ func TestPrecedence(t *testing.T) {
 		if err := os.WriteFile(tmpFile, []byte(content), 0644); err != nil {
 			t.Fatal(err)
 		}
-		defer os.Remove(tmpFile)
+		defer func() { _ = os.Remove(tmpFile) }()
 
 		var cfg Config
 		if err := envconfig.Set(&cfg, envconfig.WithFilepath(tmpFile)); err != nil {
@@ -269,7 +269,7 @@ func TestPrecedence(t *testing.T) {
 		if err := os.WriteFile(tmpFile, []byte(content), 0644); err != nil {
 			t.Fatal(err)
 		}
-		defer os.Remove(tmpFile)
+		defer func() { _ = os.Remove(tmpFile) }()
 
 		t.Setenv("VALUE", "env_val")
 
