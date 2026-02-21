@@ -9,7 +9,7 @@ import (
 
 func ExampleSet() {
 	type Config struct {
-		Value string `env:"VALUE"`
+		Value string `config:"VALUE"`
 	}
 
 	if err := os.Setenv("VALUE", "value"); err != nil {
@@ -30,8 +30,8 @@ func ExampleSet() {
 
 func ExampleSet_advanced() {
 	type Config struct {
-		Service string `env:"SERVICE,required"`
-		Port    int    `env:"PORT,default=8080"`
+		Service string `config:"SERVICE,required"`
+		Port    int    `config:"PORT,default=8080"`
 	}
 
 	if err := os.Setenv("SERVICE", "auth"); err != nil {
@@ -53,7 +53,7 @@ func ExampleSet_advanced() {
 
 func ExampleSet_withOptions() {
 	type Config struct {
-		DBName string `env:"DB_NAME"`
+		DBName string `config:"DB_NAME"`
 	}
 
 	// Example showing WithPrefix

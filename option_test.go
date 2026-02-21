@@ -75,7 +75,7 @@ func TestSetWithFilepath(t *testing.T) {
 
 	t.Run("with prefix", func(t *testing.T) {
 		type Config struct {
-			Value string `env:"VALUE"`
+			Value string `config:"VALUE"`
 		}
 		// Create a temporary .env file
 		filepath := "./test_data/with_prefix.env"
@@ -98,7 +98,7 @@ func TestSetWithFilepath(t *testing.T) {
 
 func TestWithActiveProfile(t *testing.T) {
 	type Config struct {
-		Value string `env:"VALUE"`
+		Value string `config:"VALUE"`
 	}
 
 	// Create profile files

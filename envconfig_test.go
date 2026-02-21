@@ -13,11 +13,11 @@ import (
 func TestSet(t *testing.T) {
 	t.Run("basic types", func(t *testing.T) {
 		type Config struct {
-			String  string        `env:"STRING"`
-			Int     int           `env:"INT"`
-			Float   float64       `env:"FLOAT"`
-			Bool    bool          `env:"BOOL"`
-			Duration time.Duration `env:"DURATION"`
+			String  string        `config:"STRING"`
+			Int     int           `config:"INT"`
+			Float   float64       `config:"FLOAT"`
+			Bool    bool          `config:"BOOL"`
+			Duration time.Duration `config:"DURATION"`
 		}
 
 		t.Setenv("STRING", "value")
@@ -46,7 +46,7 @@ func TestSet(t *testing.T) {
 
 	t.Run("default values", func(t *testing.T) {
 		type Config struct {
-			Default string `env:"NON_EXISTENT,default=fallback"`
+			Default string `config:"NON_EXISTENT,default=fallback"`
 		}
 
 		var cfg Config
@@ -61,7 +61,7 @@ func TestSet(t *testing.T) {
 
 	t.Run("required fields", func(t *testing.T) {
 		type Config struct {
-			Required string `env:"MISSING,required"`
+			Required string `config:"MISSING,required"`
 		}
 
 		var cfg Config
@@ -72,8 +72,8 @@ func TestSet(t *testing.T) {
 
 	t.Run("text replacement", func(t *testing.T) {
 		type Config struct {
-			Host string `env:"HOST"`
-			URL  string `env:"URL"`
+			Host string `config:"HOST"`
+			URL  string `config:"URL"`
 		}
 
 		t.Setenv("HOST", "localhost")
@@ -91,9 +91,9 @@ func TestSet(t *testing.T) {
 
 	t.Run("slices", func(t *testing.T) {
 		type Config struct {
-			Strings []string  `env:"STRINGS"`
-			Ints    []int     `env:"INTS"`
-			Floats  []float64 `env:"FLOATS"`
+			Strings []string  `config:"STRINGS"`
+			Ints    []int     `config:"INTS"`
+			Floats  []float64 `config:"FLOATS"`
 		}
 
 		t.Setenv("STRINGS", "a,b,c")
@@ -119,8 +119,8 @@ func TestSet(t *testing.T) {
 	t.Run("nested structs", func(t *testing.T) {
 		type Config struct {
 			Server struct {
-				Port int `env:"PORT"`
-			} `env:",prefix=SERVER_"`
+				Port int `config:"PORT"`
+			} `config:",prefix=SERVER_"`
 		}
 
 		t.Setenv("SERVER_PORT", "8080")
@@ -139,9 +139,9 @@ func TestSet(t *testing.T) {
 		type Config struct {
 			Server struct {
 				Database struct {
-					User string `env:"USER"`
-				} `env:",prefix=DB_"`
-			} `env:",prefix=SERVER_"`
+					User string `config:"USER"`
+				} `config:",prefix=DB_"`
+			} `config:",prefix=SERVER_"`
 		}
 
 		t.Setenv("SERVER_DB_USER", "admin")
@@ -158,8 +158,8 @@ func TestSet(t *testing.T) {
 
 	t.Run("complex slices", func(t *testing.T) {
 		type Config struct {
-			Empty []string `env:"EMPTY"`
-			Space []string `env:"SPACE"`
+			Empty []string `config:"EMPTY"`
+			Space []string `config:"SPACE"`
 		}
 
 		t.Setenv("EMPTY", "")
@@ -182,7 +182,7 @@ func TestSet(t *testing.T) {
 		type Config struct {
 			Data struct {
 				Key string `json:"key"`
-			} `env:"DATA,json"`
+			} `config:"DATA,json"`
 		}
 
 		t.Setenv("DATA", `{"key": "value"}`)
@@ -199,7 +199,7 @@ func TestSet(t *testing.T) {
 
 	t.Run("invalid config type - not a pointer", func(t *testing.T) {
 		type Config struct {
-			Value string `env:"VALUE"`
+			Value string `config:"VALUE"`
 		}
 		var cfg Config
 		if err := envconfig.Set(cfg); err == nil {
@@ -218,7 +218,7 @@ func TestSet(t *testing.T) {
 		type Config struct {
 			Data struct {
 				Key string `json:"key"`
-			} `env:"DATA,json"`
+			} `config:"DATA,json"`
 		}
 
 		t.Setenv("DATA", `{"key": "value"`) // missing closing brace
@@ -232,7 +232,7 @@ func TestSet(t *testing.T) {
 
 func TestPrecedence(t *testing.T) {
 	type Config struct {
-		Value string `env:"VALUE,default=default_val"`
+		Value string `config:"VALUE,default=default_val"`
 	}
 
 	t.Run("Default only", func(t *testing.T) {
@@ -285,7 +285,7 @@ func TestPrecedence(t *testing.T) {
 
 func TestSetWithPrefix(t *testing.T) {
 	type Config struct {
-		Value string `env:"VALUE"`
+		Value string `config:"VALUE"`
 	}
 
 	t.Setenv("APP_VALUE", "hello")

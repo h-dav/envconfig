@@ -14,7 +14,7 @@ func TestWithLogger(t *testing.T) {
 	logger := slog.New(slog.NewTextHandler(&buf, &slog.HandlerOptions{Level: slog.LevelDebug}))
 
 	type Config struct {
-		Name string `env:"NAME"`
+		Name string `config:"NAME"`
 	}
 
 	os.Setenv("NAME", "test-user")

@@ -16,7 +16,7 @@ func TestPrecedenceFull(t *testing.T) {
 	}
 
 	type Config struct {
-		Value string `env:"INTEGRATION_FLAG,default=default"`
+		Value string `config:"INTEGRATION_FLAG,default=default"`
 	}
 
 	// 1. Default vs File
@@ -75,7 +75,7 @@ func TestPrecedenceFull(t *testing.T) {
 
 	t.Run("Complex type precedence - Slices", func(t *testing.T) {
 		type Config struct {
-			Values []string `env:"SLICE"`
+			Values []string `config:"SLICE"`
 		}
 
 		tmpFile := "test_slice.env"
@@ -100,8 +100,8 @@ func TestPrecedenceFull(t *testing.T) {
 	t.Run("Complex type precedence - Nested Structs", func(t *testing.T) {
 		type Config struct {
 			Server struct {
-				Port int `env:"PORT"`
-			} `env:",prefix=SERVER_"`
+				Port int `config:"PORT"`
+			} `config:",prefix=SERVER_"`
 		}
 
 		tmpFile := "test_nested.env"

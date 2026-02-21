@@ -31,11 +31,11 @@ go get github.com/h-dav/envconfig/v3
 
 ### Struct Tags
 
-- `env`: Used to define environment variable mapping and options.
-  - Format: `env:"NAME[,option1,option2=value,...]"`
+- `config`: Used to define configuration mapping and options.
+  - Format: `config:"NAME[,option1,option2=value,...]"`
   - Options:
     - `required`: Marks the field as mandatory.
-    - `default=<value>`: Specifies a default value if the environment variable is not set.
+    - `default=<value>`: Specifies a default value if the configuration key is not set in any source.
     - `prefix=<prefix>`: Specifies a prefix for nested structs.
     - `json`: Indicates that the value should be deserialized from JSON.
 
@@ -92,7 +92,7 @@ if err != nil {
 ```go
 func main() {
     type Config struct {
-        Development bool `env:"DEVELOPMENT,default=true"`
+        Development bool `config:"DEVELOPMENT,default=true"`
     }
 
     var cfg Config
@@ -108,7 +108,7 @@ func main() {
 ```go
 func main() {
     type Config struct {
-        Service string `env:"SERVICE,required"`
+        Service string `config:"SERVICE,required"`
     }
 
     var cfg Config

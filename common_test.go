@@ -3,28 +3,28 @@ package envconfig_test
 import "time"
 
 type SuccessWithOneField struct {
-	Example string `env:"KEY"`
+	Example string `config:"KEY"`
 }
 type SuccessWithOneIntField struct {
-	Example int `env:"KEY"`
+	Example int `config:"KEY"`
 }
 
 type SuccessWithDefaultValueAndEmptyEnvFile struct {
-	Example string `env:"DEFAULT_VALUE,default=value2"`
+	Example string `config:"DEFAULT_VALUE,default=value2"`
 }
 
 type SuccessWithRequiredField struct {
-	Example string `env:"REQUIRED_VALUE,required"`
+	Example string `config:"REQUIRED_VALUE,required"`
 }
 
 type SuccessWithTextReplacement struct {
-	ReplaceField string `env:"REPLACE_FIELD"`
+	ReplaceField string `config:"REPLACE_FIELD"`
 }
 
 type SuccessWithSettingTimeDuration struct {
-	Duration time.Duration `env:"DURATION"`
+	Duration time.Duration `config:"DURATION"`
 }
 
 type SuccessWithPrefixOption struct {
-	Duration time.Duration `env:"DURATION"`
+	Duration time.Duration `config:"DURATION"`
 }
