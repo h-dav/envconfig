@@ -90,7 +90,7 @@ func (s *settings) populateNestedConfig(nestedConfig reflect.Value, prefix strin
 
 // HandleField parses the struct tag and populates the field with the corresponding value.
 func (s *settings) HandleField(field reflect.StructField, value reflect.Value, prefix string) error {
-	tag := field.Tag.Get(tagEnv)
+	tag := field.Tag.Get(tagConfig)
 	metadata, err := ParseTag(tag)
 	if err != nil {
 		return err

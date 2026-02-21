@@ -5,8 +5,8 @@ import (
 )
 
 const (
-	// tagEnv is used for fetching the environment variable by name.
-	tagEnv = "env"
+	// tagConfig is used for fetching the configuration variable by name.
+	tagConfig = "config"
 )
 
 // TagMetadata contains the parsed information from a struct tag.

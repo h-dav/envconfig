@@ -88,24 +88,24 @@ func (e *InvalidConfigTypeError) Error() string {
 
 func (e *InvalidConfigTypeError) Is(target error) bool { return target == ErrInvalidConfig }
 
-// RequiredFieldError occurs when a required field is not set and in the environment variables.
+// RequiredFieldError occurs when a required field is not set in the configuration.
 type RequiredFieldError struct {
 	FieldName string
 }
 
 func (e *RequiredFieldError) Error() string {
-	return fmt.Sprintf("required field is not set in environment variables: %v", e.FieldName)
+	return fmt.Sprintf("required field is not set in configuration: %v", e.FieldName)
 }
 
 func (e *RequiredFieldError) Is(target error) bool { return target == ErrRequired }
 
-// ReplacementError occurs when the environment variable being used for replacement is not set.
+// ReplacementError occurs when the configuration variable being used for replacement is not set.
 type ReplacementError struct {
 	VariableName string
 }
 
 func (e *ReplacementError) Error() string {
-	return fmt.Sprintf("environment variable for replacement is not set: %v", e.VariableName)
+	return fmt.Sprintf("configuration variable for replacement is not set: %v", e.VariableName)
 }
 
 func (e *ReplacementError) Is(target error) bool { return target == ErrReplacement }
@@ -153,7 +153,7 @@ func (e *JSONUnmarshalError) Error() string {
 func (e *JSONUnmarshalError) Unwrap() error        { return e.Err }
 func (e *JSONUnmarshalError) Is(target error) bool { return target == ErrJSON }
 
-// MalformedTagError occurs when an env struct tag is invalid.
+// MalformedTagError occurs when a config struct tag is invalid.
 type MalformedTagError struct {
 	Tag string
 	Err error
