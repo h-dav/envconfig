@@ -44,33 +44,33 @@ func TestParseTag(t *testing.T) {
 			},
 		},
 		{
-			name: "name and envjson",
-			tag:  "CONFIG,envjson",
+			name: "name and json",
+			tag:  "CONFIG,json",
 			want: TagMetadata{
 				Name:    "CONFIG",
-				EnvJSON: true,
+				JSON: true,
 			},
 		},
 		{
 			name: "all options",
-			tag:  "PORT,required,default=8080,prefix=API_,envjson",
+			tag:  "PORT,required,default=8080,prefix=API_,json",
 			want: TagMetadata{
 				Name:     "PORT",
 				Required: true,
 				Default:  "8080",
 				Prefix:   "API_",
-				EnvJSON:  true,
+				JSON:  true,
 			},
 		},
 		{
 			name: "whitespace handling",
-			tag:  "  PORT  ,  required  ,  default = 8080  ,  prefix = API_  ,  envjson  ",
+			tag:  "  PORT  ,  required  ,  default = 8080  ,  prefix = API_  ,  json  ",
 			want: TagMetadata{
 				Name:     "PORT",
 				Required: true,
 				Default:  "8080",
 				Prefix:   "API_",
-				EnvJSON:  true,
+				JSON:  true,
 			},
 		},
 		{

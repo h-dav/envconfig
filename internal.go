@@ -111,8 +111,8 @@ func (s *settings) HandleField(field reflect.StructField, value reflect.Value, p
 		}
 	}
 
-	// Handle EnvJSON
-	if metadata.EnvJSON {
+	// Handle JSON
+	if metadata.JSON {
 		key := prefix + metadata.Name
 		if jsonString, exists := s.source[key]; exists {
 			if s.logger != nil {

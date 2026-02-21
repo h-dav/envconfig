@@ -14,7 +14,7 @@ func TestJSONErrorContext(t *testing.T) {
 	type Config struct {
 		Data struct {
 			Key string `json:"key"`
-		} `env:"DATA,envjson"`
+		} `env:"DATA,json"`
 	}
 
 	malformedJSON := `{"key": "value"` // Missing closing brace
@@ -54,11 +54,11 @@ func TestJSONErrorComprehensive(t *testing.T) {
 	type Config struct {
 		Profile struct {
 			Name string `json:"name"`
-		} `env:"PROFILE,envjson"`
-		Settings Nested `env:"SETTINGS,envjson"`
+		} `env:"PROFILE,json"`
+		Settings Nested `env:"SETTINGS,json"`
 		Valid    struct {
 			OK bool `json:"ok"`
-		} `env:"VALID,envjson"`
+		} `env:"VALID,json"`
 	}
 
 	tests := []struct {

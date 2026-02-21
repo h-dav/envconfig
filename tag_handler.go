@@ -15,7 +15,7 @@ type TagMetadata struct {
 	Required bool
 	Default  string
 	Prefix   string
-	EnvJSON  bool
+	JSON     bool
 }
 
 // ParseTag parses a struct tag into TagMetadata.
@@ -46,8 +46,8 @@ func ParseTag(tag string) (TagMetadata, error) {
 		switch key {
 		case "required":
 			metadata.Required = true
-		case "envjson":
-			metadata.EnvJSON = true
+		case "json":
+			metadata.JSON = true
 		case "default":
 			metadata.Default = value
 		case "prefix":

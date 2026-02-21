@@ -37,7 +37,7 @@ go get github.com/h-dav/envconfig/v3
     - `required`: Marks the field as mandatory.
     - `default=<value>`: Specifies a default value if the environment variable is not set.
     - `prefix=<prefix>`: Specifies a prefix for nested structs.
-    - `envjson`: Indicates that the value should be deserialized from JSON.
+    - `json`: Indicates that the value should be deserialized from JSON.
 
 ### Other
 

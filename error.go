@@ -139,7 +139,7 @@ func (e *FileReadError) Error() string {
 func (e *FileReadError) Unwrap() error        { return e.Err }
 func (e *FileReadError) Is(target error) bool { return target == ErrFile }
 
-// JSONUnmarshalError occurs when a field marked with 'envjson' fails to unmarshal.
+// JSONUnmarshalError occurs when a field marked with 'json' fails to unmarshal.
 type JSONUnmarshalError struct {
 	FieldName string
 	RawValue  string

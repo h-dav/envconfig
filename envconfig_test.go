@@ -178,11 +178,11 @@ func TestSet(t *testing.T) {
 		}
 	})
 
-	t.Run("envjson", func(t *testing.T) {
+	t.Run("json", func(t *testing.T) {
 		type Config struct {
 			Data struct {
 				Key string `json:"key"`
-			} `env:"DATA,envjson"`
+			} `env:"DATA,json"`
 		}
 
 		t.Setenv("DATA", `{"key": "value"}`)
@@ -218,7 +218,7 @@ func TestSet(t *testing.T) {
 		type Config struct {
 			Data struct {
 				Key string `json:"key"`
-			} `env:"DATA,envjson"`
+			} `env:"DATA,json"`
 		}
 
 		t.Setenv("DATA", `{"key": "value"`) // missing closing brace
