@@ -4,4 +4,10 @@ import (
 	"testing"
 )
 
-// This file houses benchmarks for the envconfig library.
+func BenchmarkParseTag_Simple(b *testing.B) {
+	tag := "PORT,required"
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, _ = ParseTag(tag)
+	}
+}
