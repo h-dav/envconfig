@@ -10,6 +10,7 @@ Package `envconfig` will populate your config struct based on sources such as en
     - [Examples](#examples)
 - [Merging Values](#merging-values)
 - [Error Handling](#error-handling)
+- [Benchmarking](#benchmarking)
 
 ## Installation
 
@@ -131,3 +132,4 @@ func main() {
     }
 }
 ```
+\n## Benchmarking\n\nThe library includes a benchmarking suite to track performance and memory allocations. To run the benchmarks, use the following command:\n\n```bash\nmake bench\n```\n\nThis will execute benchmarks for tag parsing, source loading, and end-to-end struct population, providing metrics such as execution time (ns/op) and memory allocations (B/op and allocs/op).

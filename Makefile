@@ -33,5 +33,7 @@ lint-fix: ##@Lint
 test: ##@Test
 	go test -count=1 ./...
 
-deps: ##@Dependency
-	go mod tidy
+bench: ##@Test
+	go test -bench=. -benchmem ./...
+
+deps: ##@Dependency	go mod tidy
