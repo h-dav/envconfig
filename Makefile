@@ -36,4 +36,5 @@ test: ##@Test
 bench: ##@Test
 	go test -bench=. -benchmem ./...
 
-deps: ##@Dependency	go mod tidy
+deps: ##@Dependency
+	go mod tidy
